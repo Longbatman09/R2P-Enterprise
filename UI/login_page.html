@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report2Plot - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9f9f9;
+            --bg-tertiary: #f3f3f3;
+            --text-primary: #000000;
+            --text-secondary: #404040;
+            --text-tertiary: #707070;
+            --border-color: #e0e0e0;
+            --accent-dark: #000000;
+            --accent-light: #f0f0f0;
+            --transition: all 150ms ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 3rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .logo p {
+            color: var(--text-tertiary);
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-dark);
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--accent-dark);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: var(--transition);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .btn-login:hover {
+                background: #333333;
+            }
+            .toggle-link:hover {
+                color: var(--text-primary);
+            }
+        }
+
+        .btn-login:active {
+            transform: scale(0.97);
+        }
+
+        .toggle-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-tertiary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: underline;
+            transition: var(--transition);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+        }
+        
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-dark);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="logo">
+        <h1>Report2Plot</h1>
+        <p>AI-Powered Analytics & Extraction</p>
+    </div>
+    
+    <div id="alertBox" class="alert" style="display: none; padding: 10px; margin-bottom: 15px; border-radius: 8px; font-size: 0.9rem;"></div>
+
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" required placeholder="admin@example.com">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-login">Sign In</button>
+        <div class="toggle-link" onclick="toggleMode('signup')">Don't have an account? Sign Up</div>
+    </form>
+
+    <form id="signupForm" style="display: none;">
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" required placeholder="John Doe">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="dob">Date of Birth</label>
+                <input type="date" id="dob" required>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label for="student_class">Class</label>
+                <input type="text" id="student_class" required placeholder="e.g. 10th Grade">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="school">School</label>
+                <input type="text" id="school" required placeholder="High School">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="signup_email">Email Address</label>
+            <input type="email" id="signup_email" required placeholder="admin@example.com">
+        </div>
+        <div class="form-group">
+            <label for="signup_password">Password (Min 8 chars, 1 Uppercase, 1 Number)</label>
+            <input type="password" id="signup_password" required pattern="(?=.*\d)(?=.*[A-Z]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters">
+        </div>
+        <button type="submit" class="btn-login">Create Account</button>
+        <div class="toggle-link" onclick="toggleMode('login')">Already have an account? Sign In</div>
+    </form>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingStatus" style="font-weight: 500; color: #000000;">Signing in...</div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        const dobInput = document.getElementById('dob');
+        if (dobInput) dobInput.setAttribute('max', today);
+    });
+    
+    // Check if session exists on load
+    fetch('/api/auth/session?t=' + Date.now())
+        .then(res => res.json())
+        .then(data => {
+            if(data.user_id) { 
+                window.location.href = '/dashboard.html'; 
+            }
+        }).catch(err => console.log(err));
+
+    function showAlert(msg, isError=true) {
+        const box = document.getElementById('alertBox');
+        box.style.display = 'block';
+        box.style.backgroundColor = isError ? 'rgba(255, 50, 50, 0.2)' : 'rgba(50, 255, 50, 0.2)';
+        box.style.color = isError ? '#ffaaaa' : '#aaffaa';
+        box.style.border = isError ? '1px solid #ff5555' : '1px solid #55ff55';
+        box.innerText = msg;
+    }
+
+    function toggleMode(mode) {
+        document.getElementById('alertBox').style.display = 'none';
+        if(mode === 'signup') {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('signupForm').style.display = 'block';
+        } else {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('signupForm').style.display = 'none';
+        }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if(res.ok) {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                const pollStatus = async () => {
+                    try {
+                        const statusRes = await fetch('/api/state');
+                        const statusData = await statusRes.json();
+                        
+                        if (statusData.stage === 'syncing') {
+                            document.getElementById('loadingStatus').textContent = statusData.message || 'Retrieving your data securely from the cloud...';
+                            setTimeout(pollStatus, 500);
+                        } else {
+                            window.location.href = '/dashboard.html';
+                        }
+                    } catch(e) {
+                        setTimeout(pollStatus, 500);
+                    }
+                };
+                setTimeout(pollStatus, 500);
+            } else {
+                showAlert(data.error || 'Login failed');
+            }
+        } catch(err) {
+            showAlert('Network error');
+        }
+    });
+
+    document.getElementById('signupForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('signup_email').value;
+        const password = document.getElementById('signup_password').value;
+        const name = document.getElementById('name').value;
+        const dob = document.getElementById('dob').value;
+        const student_class = document.getElementById('student_class').value;
+        const school = document.getElementById('school').value;
+
+        // Validation
+        const pwdRegex = /^(?=.*\d)(?=.*[A-Z]).{8,}$/;
+        if(!pwdRegex.test(password)) {
+            showAlert("Password must be at least 8 chars, 1 uppercase, 1 number");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password, name, dob, class: student_class, school })
+            });
+            const data = await res.json();
+            if(res.ok) {
+                window.location.href = '/dashboard.html';
+            } else {
+                showAlert(data.error || 'Signup failed');
+            }
+        } catch(err) {
+            showAlert('Network error');
+        }
+    });
+</script>
+
+</body>
+</html>

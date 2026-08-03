@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R2P — Textbook RAG Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9f9f9;
+      --bg-tertiary: #f3f3f3;
+      --text-primary: #000000;
+      --text-secondary: #404040;
+      --text-tertiary: #707070;
+      --border-color: #e0e0e0;
+      --accent-dark: #000000;
+      --accent-light: #f0f0f0;
+      --transition: all 150ms ease;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary); color: var(--text-primary);
+      height: 100vh; display: flex; flex-direction: column;
+    }
+    header {
+      background: var(--bg-secondary); padding: 14px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); font-family: 'Outfit', sans-serif; letter-spacing: -0.5px;}
+    header nav a {
+      color: var(--text-secondary); text-decoration: none; font-size: 0.88rem;
+      padding: 5px 12px; border-radius: 6px; transition: var(--transition);
+      font-weight: 500;
+    }
+    header nav a:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+    main {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; max-width: 1000px; width: 100%; margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Layout: sidebar + chat */
+    .app-layout {
+      display: flex; flex: 1; gap: 18px; overflow: hidden;
+      min-height: 0;
+    }
+    .sidebar {
+      width: 260px; background: var(--bg-primary); border-radius: 10px;
+      padding: 14px; display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto; border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .sidebar h3 {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-tertiary); margin-bottom: 2px; font-weight: 600;
+    }
+    .textbook-card {
+      background: var(--bg-primary); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 10px 12px; cursor: pointer;
+      font-size: 0.88rem; transition: var(--transition); position: relative;
+    }
+    .textbook-card:hover { border-color: var(--text-secondary); background: var(--bg-secondary); }
+    .textbook-card.active { border-color: var(--accent-dark); background: var(--accent-light); }
+    .textbook-card .name { font-weight: 600; word-break: break-all; }
+    .textbook-card .meta { font-size: 0.73rem; color: var(--text-tertiary); margin-top: 3px; }
+    .textbook-card .del-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: none; border: none; color: #dc3545; cursor: pointer;
+      font-size: 1rem; display: none;
+    }
+    .textbook-card:hover .del-btn { display: block; }
+
+    .chat-area {
+      flex: 1; display: flex; flex-direction: column;
+      min-width: 0;
+    }
+
+
+    .btn {
+      background: var(--accent-dark); color: white; border: none;
+      padding: 7px 16px; border-radius: 6px; cursor: pointer;
+      font-size: 0.85rem; font-weight: 500; transition: var(--transition);
+      white-space: nowrap; font-family: 'Inter', sans-serif;
+    }
+    .btn:hover:not(:disabled) { background: #333; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .btn-secondary { background: var(--accent-light); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .btn-secondary:hover:not(:disabled) { background: #e8e8e8; }
+    
+    .progress-bar {
+      margin-top: 8px; height: 4px; background: var(--border-color);
+      border-radius: 2px; overflow: hidden; display: none;
+    }
+    .progress-bar .fill { height: 100%; background: var(--accent-dark);
+                           width: 0%; transition: width 0.4s ease; }
+    .ingest-status { font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; }
+
+    /* Chat messages */
+    .messages {
+      flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+      gap: 12px; padding: 6px 0;
+    }
+    .msg {
+      max-width: 88%; padding: 11px 15px; border-radius: 14px;
+      font-size: 0.9rem; line-height: 1.5;
+    }
+    .msg.user {
+      background: var(--accent-dark); color: white;
+      align-self: flex-end; border-bottom-right-radius: 4px;
+    }
+    .msg.bot {
+      background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary);
+      align-self: flex-start; border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }
+    .msg.bot pre {
+      background: var(--bg-tertiary); border: 1px solid var(--border-color);
+      border-radius: 6px; padding: 10px; margin: 8px 0;
+      overflow-x: auto; font-size: 0.82rem; color: var(--text-secondary);
+    }
+    .sources {
+      margin-top: 8px; border-top: 1px solid var(--border-color);
+      padding-top: 8px;
+    }
+    .sources summary {
+      font-size: 0.78rem; color: var(--text-secondary); cursor: pointer;
+      font-weight: 500; transition: var(--transition);
+    }
+    .sources summary:hover { color: var(--text-primary); }
+    .sources ul {
+      margin-top: 5px; padding-left: 16px;
+      font-size: 0.78rem; color: var(--text-secondary);
+    }
+    .sources li { margin-top: 3px; }
+    .typing { font-style: italic; color: var(--text-tertiary); font-size: 0.85rem; }
+
+    /* Input area */
+    .input-area {
+      margin-top: 12px; display: flex; gap: 8px;
+    }
+    .input-area input[type=text] {
+      flex: 1; background: var(--bg-primary); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 10px 14px; color: var(--text-primary);
+      font-size: 0.9rem; outline: none; transition: var(--transition);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .input-area input[type=text]:focus { border-color: var(--accent-dark); }
+    .input-area button { padding: 10px 20px; }
+
+    .empty-state {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      color: var(--text-tertiary); font-size: 0.95rem; text-align: center;
+      padding: 40px;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+    .error-msg { color: #dc3545; font-size: 0.8rem; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Report2Plot RAG</h1>
+    <nav>
+      <a href="/home">Home</a>
+      <a href="/history">History</a>
+      <a href="/reports">Reports</a>
+      <a href="/students">Students</a>
+      <a href="/settings">Settings</a>
+      <a href="/rag-chat" style="color:var(--text-primary); font-weight:700;">RAG Chat</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="app-layout">
+      <!-- Sidebar: textbook list -->
+      <aside class="sidebar">
+        <h3>My Textbooks</h3>
+        <div id="tb-list">
+          <p style="font-size:0.78rem;color:var(--text-tertiary);">Loading…</p>
+        </div>
+        <button class="btn btn-secondary" id="btn-refresh"
+                style="margin-top:6px;width:100%;">↻ Refresh</button>
+      </aside>
+
+      <!-- Chat area -->
+      <section class="chat-area">
+
+
+        <!-- Messages -->
+        <div class="messages" id="messages">
+          <div class="empty-state" id="empty-state">
+            <div>
+              <div class="icon"></div>
+              <p>Select a memory from the sidebar to ask anything.</p>
+              <p style="margin-top:6px;font-size:0.8rem;">
+                Powered by NVIDIA NIM · Pinecone
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input -->
+        <div class="input-area">
+          <input type="text" id="question" placeholder="Ask a question about the selected textbook…"
+                 disabled />
+          <button class="btn" id="btn-send" disabled>Send</button>
+        </div>
+      </section>
+    </div>
+  </main>
+  
+  <script>
+    const API = "";
+    let selectedTB = "All";
+    let textbooks   = [];
+    let currentUsername = "";
+
+    async function fetchSession() {
+      try {
+        const r = await fetch(API + "/api/auth/session");
+        if (r.ok) {
+          const d = await r.json();
+          currentUsername = d.username || "";
+        }
+      } catch (e) {
+        console.error("Failed to fetch session:", e);
+      }
+    }
+
+    // ── DOM refs ──────────────────────────────────────────────────────────────
+    const elList      = document.getElementById("tb-list");
+    const elMessages  = document.getElementById("messages");
+    const elEmpty     = document.getElementById("empty-state");
+    const elQ         = document.getElementById("question");
+    const btnSend     = document.getElementById("btn-send");
+    const btnRefresh  = document.getElementById("btn-refresh");
+
+    // ── Textbook list ─────────────────────────────────────────────────────────
+    async function fetchTextbooks() {
+      try {
+        const r = await fetch(API + "/api/rag/textbooks");
+        const d = await r.json();
+        textbooks = d.textbooks || [];
+        renderTextbooks();
+      } catch (e) {
+        elList.innerHTML = `<p class="error-msg">Failed: ${e.message}</p>`;
+      }
+    }
+
+    function renderTextbooks() {
+      if (!textbooks.length) {
+        elList.innerHTML = `<p style="font-size:0.78rem;color:var(--text-tertiary);">No textbooks yet. Upload one above.</p>`;
+        return;
+      }
+      
+      let html = `
+        <div class="textbook-card ${selectedTB === 'All' ? 'active' : ''}" onclick="selectTextbook('All')" style="cursor:pointer;">
+          <div class="name">All Memories (Global)</div>
+          <div class="meta">Search across all tests & texts</div>
+        </div>
+      `;
+      elList.innerHTML = html;
+      textbooks.forEach(tb => {
+        const card = document.createElement("div");
+        card.className = "textbook-card" + (tb.textbook_name === selectedTB ? " active" : "");
+        card.innerHTML = `
+          <button class="del-btn" title="Delete">×</button>
+          <div class="name">${esc(tb.textbook_name)}</div>
+          <div class="meta">${tb.n_chunks} chunks · ${tb.n_pages} pages · ${tb.embed_model || ""}</div>
+        `;
+        card.addEventListener("click", e => {
+          if (e.target.classList.contains("del-btn")) return;   // let del handler run
+          selectTextbook(tb.textbook_name);
+        });
+        card.querySelector(".del-btn").addEventListener("click", () => deleteTextbook(tb.textbook_name));
+        elList.appendChild(card);
+      });
+    }
+
+    function selectTextbook(name) {
+      selectedTB = name;
+      renderTextbooks();
+      elQ.disabled = false;
+      btnSend.disabled = false;
+      elQ.focus();
+      
+      if (name === "All") {
+          addBotMessage(`Switched to <b>All Memories</b>. Ask me anything across all tests!`);
+      } else {
+          addBotMessage(`Switched to <b>${esc(name)}</b>. Ask me anything!`);
+      }
+    }
+
+    async function deleteTextbook(name) {
+      if (!confirm(`Delete "${name}" from the knowledge base?`)) return;
+      try {
+        const r = await fetch(API + "/api/rag", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({action: "delete", textbook_name: name}),
+        });
+        const d = await r.json();
+        if (d.status === "success") {
+          if (selectedTB === name) { selectTextbook("All"); }
+          await fetchTextbooks();
+          addBotMessage(`Deleted <b>${esc(name)}</b>.`);
+        } else {
+          addBotMessage(`Delete failed: ${esc(d.error || "unknown")}`);
+        }
+      } catch (e) {
+        addBotMessage(`Delete error: ${e.message}`);
+      }
+    }
+
+
+
+    // ── Query ─────────────────────────────────────────────────────────────────
+    btnSend.addEventListener("click", sendQuestion);
+    elQ.addEventListener("keydown", e => { if (e.key === "Enter") sendQuestion(); });
+
+    async function sendQuestion() {
+      const q = elQ.value.trim();
+      if (!q || !selectedTB) return;
+      elQ.value = "";
+      addUserMessage(q);
+      addBotTyping();
+
+      try {
+        const r = await fetch(API + "/api/rag", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({action: "query", textbook_name: selectedTB, question: q, top_k: 4, username: currentUsername}),
+        });
+        const d = await r.json();
+        removeTyping();
+        if (d.status === "ok") addBotAnswer(q, d.answer, d.sources || []);
+        else addBotMessage(`Error: ${d.error || "unknown"}`);
+      } catch (e) {
+        removeTyping();
+        addBotMessage(`${e.message}`);
+      }
+    }
+
+    // ── Chat UI helpers ───────────────────────────────────────────────────────
+    function addUserMessage(text) {
+      hideEmpty();
+      const div = document.createElement("div");
+      div.className = "msg user";
+      div.innerHTML = esc(text);
+      elMessages.appendChild(div);
+      scrollBottom();
+    }
+
+    function addBotMessage(html) {
+      hideEmpty();
+      const div = document.createElement("div");
+      div.className = "msg bot";
+      div.innerHTML = html;
+      elMessages.appendChild(div);
+      scrollBottom();
+    }
+
+    function addBotAnswer(question, answer, sources) {
+      hideEmpty();
+      const div = document.createElement("div");
+      div.className = "msg bot";
+      let srcHtml = "";
+      if (sources.length) {
+        srcHtml = `<div class="sources"><details><summary>Sources (${sources.length} chunks)</summary><ul>
+          ${sources.map((s,i) => `<li><b>Page ${s.page}</b> (score ${s.score}) — ${esc(s.text_snippet)}</li>`).join("")}
+        </ul></details></div>`;
+      }
+      div.innerHTML = `<b>Q: ${esc(question)}</b><br><br>${formatAnswer(answer)}${srcHtml}`;
+      elMessages.appendChild(div);
+      scrollBottom();
+    }
+
+    function addBotTyping() {
+      hideEmpty();
+      const div = document.createElement("div");
+      div.className = "msg bot";
+      div.id = "typing";
+      div.innerHTML = '<span class="typing">Thinking…</span>';
+      elMessages.appendChild(div);
+      scrollBottom();
+    }
+    function removeTyping() {
+      const el = document.getElementById("typing");
+      if (el) el.remove();
+    }
+
+    function hideEmpty() { if (elEmpty) elEmpty.style.display = "none"; }
+
+    function scrollBottom() {
+      requestAnimationFrame(() => elMessages.scrollTop = elMessages.scrollHeight);
+    }
+
+    function formatAnswer(text) {
+      // Simple markdown-ish formatting
+      let s = esc(text);
+      s = s.replace(/`([^`]+)`/g, "<code style='background:var(--bg-tertiary);padding:2px 5px;border-radius:4px;'>$1</code>");
+      s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+      s = s.replace(/\n/g, "<br>");
+      return s;
+    }
+
+    function esc(str) {
+      return String(str || "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    btnRefresh.addEventListener("click", fetchTextbooks);
+    fetchSession();
+    fetchTextbooks();
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "C:\Users\Admin\Documents\Report2Plot\my-agent\app\agent_runtime_app.py", line 49, in <module>
+    from app.agent import app as adk_app
+  File "C:\Users\Admin\Documents\Report2Plot\my-agent\app\__init__.py", line 15, in <module>
+    from .agent import app
+  File "C:\Users\Admin\Documents\Report2Plot\my-agent\app\agent.py", line 42, in <module>
+    import mcp_servers.vision_extractor as ve
+  File "C:\Users\Admin\Documents\Report2Plot\mcp_servers\vision_extractor.py", line 1, in <module>
+    from mcp.server.fastmcp import FastMCP
+ModuleNotFoundError: No module named 'mcp'

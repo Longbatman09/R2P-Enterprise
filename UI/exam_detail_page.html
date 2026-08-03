@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam History Detail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9f9f9;
+            --bg-tertiary: #f3f3f3;
+            --text-primary: #000000;
+            --text-secondary: #404040;
+            --text-tertiary: #707070;
+            --border-color: #e0e0e0;
+            --accent-dark: #000000;
+            --accent-success: #155724;
+            --bg-success: #d4edda;
+            --border-success: #c3e6cb;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .header-content h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-content p {
+            font-size: 0.95rem;
+            color: var(--text-tertiary);
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-dark);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: rgba(0, 0, 0, 0.85);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-dark);
+        }
+
+        .btn-success {
+            background: var(--bg-success);
+            border: 1px solid var(--border-success);
+            color: var(--accent-success);
+            text-transform: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+        }
+
+        .btn-success:hover {
+            background: #c3e6cb;
+            transform: translateY(-1px);
+        }
+
+        .section-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-card h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--bg-tertiary);
+            padding-bottom: 0.5rem;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .meta-item h4 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            margin-bottom: 0.25rem;
+        }
+
+        .meta-item p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .file-list, .student-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .student-item:hover {
+            border-color: var(--accent-dark);
+            transform: translateX(4px);
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .student-id {
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+        }
+
+        .badge-list {
+            margin-top: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-right: 0.5rem;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .error-state h2 {
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-state p {
+            color: var(--text-tertiary);
+            margin-bottom: 1.5rem;
+        }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: var(--bg-primary); padding: 2rem; border-radius: 12px;
+            width: 90%; max-width: 500px;
+        }
+    
+.modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        
+</style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1 id="exam-display-name">Exam Details</h1>
+                <p id="exam-date-meta">Loading history details...</p>
+            </div>
+            <a href="history_page.html" class="btn btn-secondary">← Back to List</a>
+        </header>
+
+        <div id="content" style="display: none; flex: 1; min-height: 0; gap: 2rem;">
+            <!-- Left Column -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 1.5rem; overflow-y: auto; padding-right: 0.5rem;">
+                <div class="section-card">
+                    <h2>Exam Overview</h2>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <h4>Exam Series Group</h4>
+                            <p id="exam-group-name">N/A</p>
+                        </div>
+                        <div class="meta-item">
+                            <h4>Status</h4>
+                            <p id="exam-status-val">N/A</p>
+                        </div>
+                        <div class="meta-item">
+                            <h4>Generated On</h4>
+                            <p id="exam-created-val">N/A</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card" style="flex: 1; display: flex; flex-direction: column;">
+                    <h2>Source Document</h2>
+                    <div id="exam-doc-area" style="text-align:center;color:#707070; flex: 1; display: flex; flex-direction: column;">
+                        No document linked.
+                    </div>
+                </div>
+                
+            </div>
+
+            <!-- Right Column -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 1.5rem; overflow-y: auto; padding-right: 0.5rem;">
+                <div class="section-card" style="flex: 1; display: flex; flex-direction: column;">
+                    <h2>Processed Output</h2>
+                    <pre id="exam-processed-output" style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:1.25rem;flex: 1;overflow:auto;font-size:.88rem;white-space:pre-wrap;word-break:break-word;margin:0;">Loading…</pre>
+                </div>
+
+                <div class="section-card">
+                    <h2>Student Directory</h2>
+                    <div class="student-list" id="exam-students-list">
+                        <!-- Students populated here -->
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: auto; padding-bottom: 1rem;">
+                    <a id="load-group-btn" href="#" class="btn btn-primary">Load Group Configuration</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-container" style="display: none;">
+            <div class="error-state">
+                <h2>History Record Not Found</h2>
+                <p id="error-message">Could not retrieve detail for the specified exam group.</p>
+                <a href="history_page.html" class="btn btn-secondary">Back to History List</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-data-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 id="add-modal-title" style="margin-bottom: 0.5rem;">Add Consecutive Data</h3>
+            <p style="margin-bottom: 1.5rem; color: var(--text-tertiary); font-size: 0.95rem;">Upload a new test report to append to this student's timeline.</p>
+            <input type="file" id="add-file-input" accept=".pdf" multiple style="margin-bottom: 1.5rem; width: 100%;" />
+            <div id="add-modal-progress-container" style="display: none; margin-bottom: 1.5rem;">
+                <div style="font-size: 0.85rem; margin-bottom: 0.5rem;" id="add-modal-status">Processing...</div>
+                <div style="background: var(--bg-tertiary); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="add-modal-progress-bar" style="background: var(--accent-success); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" id="add-modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="add-modal-submit">Upload & Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatDate(iso) {
+            if (!iso) return 'Unknown Date';
+            try {
+                const date = new Date(iso);
+                if (isNaN(date.getTime())) return iso;
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch {
+                return iso;
+            }
+        }
+
+        async function loadExamDetail() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let targetExamName = urlParams.get('exam_name') || urlParams.get('name') || '';
+
+            if (!targetExamName && urlParams.get('report_id')) {
+                const aliasName = urlParams.get('report_id');
+                currentExamName = aliasName;
+            }
+
+            if (!targetExamName) {
+                showError("No exam series specified in the URL.");
+                return;
+            }
+            currentExamName = targetExamName;
+
+            try {
+                const res = await fetch('/api/history');
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Failed to retrieve list.');
+
+                const assignment = (data.items || []).find(item => 
+                    item.exam_names && item.exam_names.includes(targetExamName)
+                );
+
+                if (!assignment) {
+                    showError(`No history record found matching exam group "${targetExamName}".`);
+                    return;
+                }
+
+                // Populate UI
+                document.getElementById('exam-display-name').textContent = assignment.display_name;
+                document.getElementById('exam-date-meta').textContent = `Processed on ${formatDate(assignment.updated_at)}`;
+                document.getElementById('exam-group-name').textContent = assignment.exam_names.join(', ');
+
+                // Populate metadata
+                const statusEl = document.getElementById('exam-status-val');
+                const createdEl = document.getElementById('exam-created-val');
+                if (statusEl) statusEl.textContent = 'Completed';
+                if (createdEl) createdEl.textContent = formatDate(assignment.updated_at || assignment.created_at);
+
+                // Populate source documents
+                const docArea = document.getElementById('exam-doc-area');
+                if (assignment.source_docs && assignment.source_docs.length > 0) {
+                    docArea.innerHTML = assignment.source_docs.map(doc => {
+                        const path = doc.path || doc;
+                        const examName = doc.exam || '';
+                        const filename = path.split(/[\/\\]/).pop();
+                        return `
+                            <div class="file-item" style="cursor: pointer;" onclick="window.open('/api/file?path=${encodeURIComponent(path)}', '_blank')">
+                                <span></span>
+                                <span style="text-decoration: underline; color: var(--accent-dark);">${filename}</span>
+                                ${examName ? `<span style="color: var(--text-tertiary); font-size: 0.8rem; margin-left: auto;">(${examName})</span>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    docArea.innerHTML = '<div style="padding:1rem;">No source documents available.</div>';
+                }
+
+                // Populate processed output
+                const outEl = document.getElementById('exam-processed-output');
+                if (outEl) {
+                    if (assignment.processed_files && assignment.processed_files.length > 0) {
+                        outEl.innerHTML = assignment.processed_files.map(path => {
+                            const filename = path.split(/[\/\\]/).pop();
+                            return `
+                                <div class="file-item" style="cursor: pointer;" onclick="window.open('/api/file?path=${encodeURIComponent(path)}', '_blank')">
+                                    <span></span>
+                                    <span style="text-decoration: underline; color: var(--accent-dark);">${filename}</span>
+                                </div>
+                            `;
+                        }).join('');
+                        outEl.style.whiteSpace = 'normal';
+                        outEl.style.fontFamily = 'inherit';
+                        outEl.style.background = 'transparent';
+                        outEl.style.padding = '0';
+                        outEl.style.border = 'none';
+                    } else {
+                        outEl.textContent = 'No processed output files available.';
+                    }
+                }
+
+                // Populate Students
+                const studentsList = document.getElementById('exam-students-list');
+                studentsList.innerHTML = assignment.students.map(s => `
+                    <div class="student-item">
+                        <div class="student-info">
+                            <span class="student-name">${s.name || 'Unknown'}</span>
+                            ${s.id ? `<span class="student-id">(${s.id})</span>` : ''}
+                        </div>
+                        <button onclick="openAddDataModal('${s.id || ''}', '${s.name || ''}')" class="btn btn-success">
+                            Add Consecutive Data
+                        </button>
+                    </div>
+                `).join('');
+
+                // Setup action buttons
+                document.getElementById('load-group-btn').href = `description_page.html?exam_name=${encodeURIComponent(assignment.exam_names[0] || '')}`;
+
+                document.getElementById('content').style.display = 'flex';
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('error-message').textContent = msg;
+            document.getElementById('error-container').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadExamDetail();
+
+            const clientId = Math.random().toString(36).substring(2);
+            function sendHeartbeat() {
+                fetch(`/api/heartbeat?client_id=${clientId}`).catch(() => {});
+            }
+            sendHeartbeat();
+            setInterval(sendHeartbeat, 2000);
+            window.addEventListener('beforeunload', () => {
+                if (navigator.sendBeacon) navigator.sendBeacon(`/api/heartbeat?client_id=${clientId}&closing=true`);
+            });
+        });
+
+        let addStudentName = '';
+        let addStudentId = '';
+        let currentExamName = '';
+        let addPollInterval = null;
+
+        function openAddDataModal(studentId, studentName) {
+            addStudentId = studentId;
+            addStudentName = studentName;
+            document.getElementById('add-modal-title').textContent = `Add Data for ${studentName}`;
+            document.getElementById('add-file-input').value = '';
+            document.getElementById('add-modal-progress-container').style.display = 'none';
+            document.getElementById('add-modal-submit').style.display = 'inline-flex';
+            document.getElementById('add-data-modal').style.display = 'flex';
+        }
+
+        document.getElementById('add-modal-cancel').addEventListener('click', () => {
+            document.getElementById('add-data-modal').style.display = 'none';
+            if (addPollInterval) clearInterval(addPollInterval);
+        });
+
+        document.getElementById('add-modal-submit').addEventListener('click', async () => {
+            const fileInput = document.getElementById('add-file-input');
+            if (!fileInput.files.length) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            document.getElementById('add-modal-submit').style.display = 'none';
+            document.getElementById('add-modal-progress-container').style.display = 'block';
+            document.getElementById('add-modal-status').textContent = 'Uploading file...';
+            document.getElementById('add-modal-progress-bar').style.width = '10%';
+
+            try {
+                const base64Files = await Promise.all(Array.from(fileInput.files).map(async file => {
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve({ name: file.name, data: reader.result.split(',')[1] });
+                        reader.readAsDataURL(file);
+                    });
+                }));
+
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: base64Files })
+                });
+                const uploadData = await uploadRes.json();
+                if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
+
+                document.getElementById('add-modal-status').textContent = 'Submitting job...';
+                document.getElementById('add-modal-progress-bar').style.width = '20%';
+
+                const payload = {
+                    workflow: 'student_report',
+                    input_files: uploadData.files,
+                    target_exam_name: currentExamName,
+                    student: {
+                        query: addStudentName,
+                        name: addStudentName,
+                        id: addStudentId,
+                        class: '',
+                        section: ''
+                    },
+                    output: { format: 'both' },
+                    extra_description: ''
+                };
+
+                const analyzeRes = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!analyzeRes.ok) throw new Error('Analysis failed to start');
+
+                
+                document.getElementById('add-data-modal').style.display = 'none';
+                
+                const modal = document.getElementById('processing-modal');
+                modal.classList.add('active');
+                document.getElementById('modal-spinner').style.display = 'block';
+                document.getElementById('modal-title').textContent = 'ANALYZING...';
+                document.getElementById('modal-status').textContent = 'Processing documents...';
+                document.getElementById('modal-status').style.display = 'block';
+                document.getElementById('modal-progress-container').style.display = 'block';
+                document.getElementById('modal-progress-bar').style.width = '0%';
+                document.getElementById('results-container').style.display = 'none';
+                
+                document.getElementById('live-comments').innerHTML = '';
+                document.getElementById('live-view-placeholder').style.display = 'block';
+                document.getElementById('live-view-area').style.display = 'none';
+                document.getElementById('live-doc-frame').src = 'about:blank';
+                const initialMdFrame = document.getElementById('live-md-frame');
+                initialMdFrame.style.whiteSpace = 'pre-wrap';
+                initialMdFrame.textContent = '';
+                
+                let currentFileProcessing = null;
+                let currentMdProcessing = null;
+                let currentJsonProcessing = null;
+                let mdPollInterval = null;
+                
+                let isPolling = true;
+const pollStatus = async () => {
+                    if (!isPolling) return;
+                    try {
+                        const statusRes = await fetch('/api/state');
+                        const statusData = await statusRes.json();
+                        
+                        const msg = statusData.message || 'Processing...';
+                        document.getElementById('modal-status').textContent = msg;
+                        
+                        // Update live comments
+                        const commentsDiv = document.getElementById('live-comments');
+                        if (!commentsDiv.lastChild || commentsDiv.lastChild.textContent !== '> ' + msg) {
+                            const p = document.createElement('div');
+                            p.textContent = '> ' + msg;
+                            commentsDiv.appendChild(p);
+                            commentsDiv.scrollTop = commentsDiv.scrollHeight;
+                        }
+
+                        // Update Live View Panel
+                        if (statusData.current_file && statusData.current_file !== currentFileProcessing) {
+                            currentFileProcessing = statusData.current_file;
+                            currentMdProcessing = statusData.current_markdown;
+                            currentJsonProcessing = null;
+                            
+                            document.getElementById('live-view-placeholder').style.display = 'none';
+                            document.getElementById('live-view-area').style.display = 'block';
+                            
+                            const docFrame = document.getElementById('live-doc-frame');
+                            const mdFrame = document.getElementById('live-md-frame');
+                            const jsonFrame = document.getElementById('live-json-frame');
+                            docFrame.src = `/api/file?path=${encodeURIComponent(statusData.current_file)}`;
+                            docFrame.style.opacity = 1;
+                            docFrame.style.pointerEvents = 'auto';
+                            mdFrame.style.opacity = 0;
+                            mdFrame.style.pointerEvents = 'none';
+                            mdFrame.textContent = '';
+                            if (jsonFrame) {
+                                jsonFrame.textContent = '';
+                                jsonFrame.style.opacity = 0;
+                                jsonFrame.style.pointerEvents = 'none';
+                            }
+                            
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            if (currentMdProcessing) {
+                                mdPollInterval = setInterval(async () => {
+                                    try {
+                                        const res = await fetch(`/api/file?path=${encodeURIComponent(currentMdProcessing)}`);
+                                        if (res.ok) {
+                                            const text = await res.text();
+                                            if (text && text.trim().length > 0) {
+                                                mdFrame.textContent = text;
+                                                docFrame.style.opacity = 0;
+                                                docFrame.style.pointerEvents = 'none';
+                                                mdFrame.style.opacity = 1;
+                                                mdFrame.style.pointerEvents = 'auto';
+                                                clearInterval(mdPollInterval);
+                                            }
+                                        }
+                                    } catch (e) {}
+                                }, 1500);
+                            }
+                        }
+
+                        if (statusData.current_jsonpreview && statusData.current_jsonpreview !== currentJsonProcessing) {
+                            currentJsonProcessing = statusData.current_jsonpreview;
+                            try {
+                                const resJ = await fetch(`/api/file?path=${encodeURIComponent(currentJsonProcessing)}`);
+                                if (resJ.ok) {
+                                    const jsonText = await resJ.text();
+                                    if (jsonText && jsonText.trim().length > 0) {
+                                        const jsonFrame = document.getElementById('live-json-frame');
+                                        const mdFrame = document.getElementById('live-md-frame');
+                                        if (jsonFrame && mdFrame) {
+                                            try {
+                                                const parsed = JSON.parse(jsonText);
+                                                jsonFrame.textContent = JSON.stringify(parsed, null, 2);
+                                            } catch(e) {
+                                                jsonFrame.textContent = jsonText;
+                                            }
+                                            mdFrame.style.opacity = 0;
+                                            mdFrame.style.pointerEvents = 'none';
+                                            jsonFrame.style.opacity = 1;
+                                            jsonFrame.style.pointerEvents = 'auto';
+                                        }
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+
+                        if (statusData.stage === 'done') {
+                            isPolling = false;
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            document.getElementById('modal-title').textContent = 'Analysis Complete';
+                            document.getElementById('modal-progress-bar').style.width = '100%';
+                            document.getElementById('modal-spinner').style.display = 'none';
+                            
+                            // Ensure the preview screen is visible on completion
+                            document.getElementById('live-view-placeholder').style.display = 'none';
+                            document.getElementById('live-view-area').style.display = 'block';
+
+                            const deliverablesHTML = (statusData.files || []).map(f => {
+                                const baseName = f.split(/[/\\]/).pop();
+                                return `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; border: 1px solid #333; border-radius: 6px; margin-bottom: 0.5rem; background: #000;">
+                                        <span style="color: white; font-family: 'Inter', sans-serif; font-size: 0.85rem;">${baseName}</span>
+                                        <button onclick="openFile('${f.replace(/\\/g, '\\\\')}')" style="background: white; color: black; border: none; padding: 0.35rem 0.7rem; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.75rem; font-family: 'Inter', sans-serif;">Open</button>
+                                    </div>
+                                `;
+                            }).join('');
+                            
+                            /* document.getElementById('modal-actions').style.display = 'block'; */
+                            
+                            // Auto redirect if we're not on new workflow
+                            const urlParams = new URLSearchParams(window.location.search);
+                            
+                            const mdFrame = document.getElementById('live-md-frame');
+                            const outputFormat = "BOTH";
+                            const docFrame = document.getElementById('live-doc-frame');
+                            const jsonFrameComplete = document.getElementById('live-json-frame');
+                            if (jsonFrameComplete) {
+                                jsonFrameComplete.style.opacity = 0;
+                                jsonFrameComplete.style.pointerEvents = 'none';
+                            }
+                            docFrame.style.opacity = 0;
+                            docFrame.style.pointerEvents = 'none';
+                            
+                            mdFrame.style.opacity = 1;
+                            mdFrame.style.pointerEvents = 'auto';
+                            mdFrame.style.whiteSpace = 'normal';
+                            mdFrame.innerHTML = `
+                                <div style="font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100%;">
+                                    <h2 style="color: white; margin-top: 0; font-size: 1.5rem; font-weight: 300;">Analysis Complete</h2>
+                                    <p style="color: #a1a1aa; margin-bottom: 1.25rem; font-size: 0.9rem;">The files were successfully analyzed. Final reports have been generated and saved.</p>
+                                    
+                                    <div style="margin-bottom: 1.25rem; flex-shrink: 0;">
+                                        <h3 style="color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; border-bottom: 1px solid #333; padding-bottom: 0.25rem;">Output Settings Applied</h3>
+                                        <ul style="color: #a1a1aa; list-style: none; padding: 0; font-size: 0.9rem;">
+                                            <li style="margin-bottom: 0.25rem;"><strong style="color: white;">Format:</strong> ${outputFormat}</li>
+                                            <li><strong style="color: white;">Note:</strong> ${'None'}</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 1.5rem; flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                                        <h3 style="color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; border-bottom: 1px solid #333; padding-bottom: 0.25rem; flex-shrink: 0;">Generated Deliverables</h3>
+                                        <div style="overflow-y: auto; flex: 1; padding-right: 0.5rem;">
+                                            ${deliverablesHTML}
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 1rem; flex-shrink: 0; margin-top: auto;">
+                                        <button onclick="window.location.reload()" style="background: white; color: black; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">Reload Page</button>
+                                        <button onclick="window.location.reload()" style="background: transparent; color: white; border: 1px solid white; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">Close</button>
+                                    </div>
+                                </div>
+                            `;
+
+                        } else if (statusData.stage === 'error') {
+                            isPolling = false;
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            document.getElementById('modal-title').textContent = 'Analysis Failed';
+                            document.getElementById('modal-spinner').style.display = 'none';
+                            document.getElementById('modal-progress-container').style.display = 'none';
+                            /* document.getElementById('modal-actions').style.display = 'block'; */
+                        } else {
+                            let percent = 5;
+                            if (statusData.stage === 'converting') {
+                                const progress = statusData.progress_total > 0 ? (statusData.progress_current / statusData.progress_total) : 0;
+                                percent = 5 + Math.round(progress * 25);
+                            } else if (statusData.stage === 'extracting') {
+                                const progress = statusData.progress_total > 0 ? (statusData.progress_current / statusData.progress_total) : 0;
+                                percent = 30 + Math.round(progress * 50);
+                            } else if (statusData.stage === 'rendering') {
+                                percent = 85;
+                            }
+                            document.getElementById('modal-progress-bar').style.width = percent + '%';
+                        }
+                    } catch (e) {
+                        console.warn("Poll error:", e);
+                    }
+                    if (isPolling) setTimeout(pollStatus, 1500);
+                };
+                setTimeout(pollStatus, 1500);
+
+            
+
+            } catch (err) {
+                document.getElementById('add-modal-status').textContent = 'Error: ' + err.message;
+                document.getElementById('add-modal-submit').style.display = 'inline-flex';
+            }
+        });
+
+        function openFile(path) {
+            window.open('/api/file?path=' + encodeURIComponent(path) + '&t=' + Date.now(), '_blank');
+        }
+
+        function closeModal() {
+            document.getElementById('processing-modal').classList.remove('active');
+            window.location.reload();
+        }
+    </script>
+
+<div class="modal-overlay" id="processing-modal" style="background: rgba(0,0,0,0.85); align-items: stretch; padding: 0;">
+        <div id="live-analysis-screen" style="display: flex; width: 100vw; height: 100vh; color: white; background: #000;">
+            <!-- Left Panel (~35%) -->
+            <div style="width: 35%; padding: 3rem; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1); overflow-y: auto;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+                    <div class="spinner" id="modal-spinner" style="border-top-color: white; margin: 0;"></div>
+                    <h2 id="modal-title" style="font-size: 1.5rem; font-weight: bold; letter-spacing: 2px; margin: 0;">ANALYZING...</h2>
+                </div>
+                
+                <p class="modal-subtitle" id="modal-status" style="display: none;">Processing documents...</p>
+                
+                <div id="live-comments" style="flex: 1; margin-top: 1rem; overflow-y: auto; font-family: monospace; font-size: 0.9rem; color: #a1a1aa; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 1rem;">
+                    <!-- Live comments will be appended here -->
+                </div>
+                
+                <div class="progress-bar" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 1.5rem; flex-shrink: 0;" id="modal-progress-container">
+                    <div class="progress-fill" id="modal-progress-bar" style="width: 0%; height: 100%; background: #4f46e5; transition: width 0.3s;"></div>
+                </div>
+                
+                <div id="results-container" style="display: none; margin-top: 1.5rem; flex-shrink: 0; color: #e4e4e7;">
+                    <p style="font-weight: 600; margin-bottom: 1rem;">Generated Deliverables:</p>
+                    <div class="result-list" id="results-list" style="color: black; background: transparent; padding: 0;"></div>
+                </div>
+
+                <div style="margin-top: 2rem; display: none; flex-shrink: 0;" id="modal-actions">
+                    <button class="btn btn-primary" onclick="closeModal()" style="width: 100%;">Complete</button>
+                </div>
+            </div>
+
+            <!-- Right Panel (~65%) -->
+            <div style="width: 65%; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #18181b; position: relative;">
+                <div id="live-view-area" style="width: 100%; height: 100%; position: relative; overflow: hidden; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: none;">
+                    <iframe id="live-doc-frame" src="about:blank" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background: white; transition: opacity 0.8s ease-in-out; pointer-events: none;"></iframe>
+                    <div id="live-md-frame" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background: #27272a; padding: 2rem; overflow-y: auto; opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; font-family: monospace; white-space: pre-wrap; font-size: 0.95rem; color: #e4e4e7;"></div>
+                    <div id="live-json-frame" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background: #27272a; padding: 2rem; overflow-y: auto; opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; font-family: monospace; white-space: pre-wrap; font-size: 0.95rem; color: #a3e635;"></div>
+                </div>
+                <div id="live-view-placeholder" style="color: #52525b; font-family: monospace; font-size: 1.1rem; letter-spacing: 1px;">
+                    WAITING FOR DOCUMENT...
+                </div>
+            </div>
+        </div>
+    </d
+</body>
+</html>

@@ -1,0 +1,135 @@
+const pollStatus = async () => {
+                    if (!isPolling) return;
+                    try {
+                        const statusRes = await fetch('/api/state');
+                        const statusData = await statusRes.json();
+                        
+                        const msg = statusData.message || 'Processing...';
+                        document.getElementById('modal-status').textContent = msg;
+                        
+                        // Update live comments
+                        const commentsDiv = document.getElementById('live-comments');
+                        if (!commentsDiv.lastChild || commentsDiv.lastChild.textContent !== '> ' + msg) {
+                            const p = document.createElement('div');
+                            p.textContent = '> ' + msg;
+                            commentsDiv.appendChild(p);
+                            commentsDiv.scrollTop = commentsDiv.scrollHeight;
+                        }
+
+                        // Update Live View Panel
+                        if (statusData.current_file && statusData.current_file !== currentFileProcessing) {
+                            currentFileProcessing = statusData.current_file;
+                            currentMdProcessing = statusData.current_markdown;
+                            
+                            document.getElementById('live-view-placeholder').style.display = 'none';
+                            document.getElementById('live-view-area').style.display = 'block';
+                            
+                            const docFrame = document.getElementById('live-doc-frame');
+                            const mdFrame = document.getElementById('live-md-frame');
+                            docFrame.src = `/api/file?path=${encodeURIComponent(statusData.current_file)}`;
+                            docFrame.style.opacity = 1;
+                            mdFrame.style.opacity = 0;
+                            mdFrame.textContent = '';
+                            
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            if (currentMdProcessing) {
+                                mdPollInterval = setInterval(async () => {
+                                    try {
+                                        const res = await fetch(`/api/file?path=${encodeURIComponent(currentMdProcessing)}`);
+                                        if (res.ok) {
+                                            const text = await res.text();
+                                            if (text && text.trim().length > 0) {
+                                                mdFrame.textContent = text;
+                                                docFrame.style.opacity = 0;
+                                                mdFrame.style.opacity = 1;
+                                                clearInterval(mdPollInterval);
+                                            }
+                                        }
+                                    } catch (e) {}
+                                }, 1500);
+                            }
+                        }
+
+                        if (statusData.stage === 'done') {
+                            isPolling = false;
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            document.getElementById('modal-title').textContent = 'Analysis Complete';
+                            document.getElementById('modal-progress-bar').style.width = '100%';
+                            document.getElementById('modal-spinner').style.display = 'none';
+                            
+                            const deliverablesHTML = (statusData.files || []).map(f => {
+                                const baseName = f.split(/[/\\]/).pop();
+                                return `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; border: 1px solid #333; border-radius: 6px; margin-bottom: 0.5rem; background: #000;">
+                                        <span style="color: white; font-family: 'Inter', sans-serif; font-size: 0.85rem;">📄 ${baseName}</span>
+                                        <button onclick="openFile('${f.replace(/\\/g, '\\\\')}')" style="background: white; color: black; border: none; padding: 0.35rem 0.7rem; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.75rem; font-family: 'Inter', sans-serif;">Open</button>
+                                    </div>
+                                `;
+                            }).join('');
+                            
+                            /* document.getElementById('modal-actions').style.display = 'block'; */
+                            
+                            // Auto redirect if we're not on new workflow
+                            const urlParams = new URLSearchParams(window.location.search);
+                            
+                            const mdFrame = document.getElementById('live-md-frame');
+                            const outputFormat = document.querySelector('input[name="output_format"]:checked').value.toUpperCase();
+                            const docFrame = document.getElementById('live-doc-frame');
+                            docFrame.style.opacity = 0;
+                            
+                            mdFrame.style.opacity = 1;
+                            mdFrame.innerHTML = `
+                                <div style="font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100%;">
+                                    <h2 style="color: white; margin-top: 0; font-size: 1.5rem; font-weight: 300;">Analysis Complete</h2>
+                                    <p style="color: #a1a1aa; margin-bottom: 1.25rem; font-size: 0.9rem;">The files were successfully analyzed. Final reports have been generated and saved.</p>
+                                    
+                                    <div style="margin-bottom: 1.25rem; flex-shrink: 0;">
+                                        <h3 style="color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; border-bottom: 1px solid #333; padding-bottom: 0.25rem;">Output Settings Applied</h3>
+                                        <ul style="color: #a1a1aa; list-style: none; padding: 0; font-size: 0.9rem;">
+                                            <li style="margin-bottom: 0.25rem;"><strong style="color: white;">Format:</strong> ${outputFormat}</li>
+                                            <li><strong style="color: white;">Note:</strong> ${document.getElementById('extra_description').value || 'None'}</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 1.5rem; flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                                        <h3 style="color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; border-bottom: 1px solid #333; padding-bottom: 0.25rem; flex-shrink: 0;">Generated Deliverables</h3>
+                                        <div style="overflow-y: auto; flex: 1; padding-right: 0.5rem;">
+                                            ${deliverablesHTML}
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 1rem; flex-shrink: 0; margin-top: auto;">
+                                        <button onclick="window.location.href='/history_page.html'" style="background: white; color: black; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">View in History</button>
+                                        <button onclick="closeModal()" style="background: transparent; color: white; border: 1px solid white; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">Close</button>
+                                    </div>
+                                </div>
+                            `;
+
+                        } else if (statusData.stage === 'error') {
+                            isPolling = false;
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            document.getElementById('modal-title').textContent = 'Analysis Failed';
+                            document.getElementById('modal-spinner').style.display = 'none';
+                            document.getElementById('modal-progress-container').style.display = 'none';
+                            /* document.getElementById('modal-actions').style.display = 'block'; */
+                        } else {
+                            let percent = 5;
+                            if (statusData.stage === 'converting') {
+                                const progress = statusData.progress_total > 0 ? (statusData.progress_current / statusData.progress_total) : 0;
+                                percent = 5 + Math.round(progress * 25);
+                            } else if (statusData.stage === 'extracting') {
+                                const progress = statusData.progress_total > 0 ? (statusData.progress_current / statusData.progress_total) : 0;
+                                percent = 30 + Math.round(progress * 50);
+                            } else if (statusData.stage === 'rendering') {
+                                percent = 85;
+                            }
+                            document.getElementById('modal-progress-bar').style.width = percent + '%';
+                        }
+                    } catch (e) {
+                        console.warn("Poll error:", e);
+                    }
+                    if (isPolling) setTimeout(pollStatus, 1500);
+                };
+                setTimeout(pollStatus, 1500);
+
+            

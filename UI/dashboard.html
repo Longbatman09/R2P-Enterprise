@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Report2Plot - Dashboard</title>
+ <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+ <style>
+  :root {
+   --bg-primary: #ffffff;
+   --bg-secondary: #f9f9f9;
+   --bg-tertiary: #f3f3f3;
+   --text-primary: #000000;
+   --text-secondary: #404040;
+   --text-tertiary: #707070;
+   --border-color: #e0e0e0;
+   --accent-dark: #000000;
+   --accent-light: #f0f0f0;
+   --transition: all 150ms ease;
+  }
+  body, html {
+   margin: 0;
+   padding: 0;
+   height: 100%;
+   font-family: 'Inter', 'Outfit', sans-serif;
+   background-color: var(--bg-primary);
+   color: var(--text-primary);
+  }
+  .navbar {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   padding: 1.5rem 3rem;
+   background: var(--bg-secondary);
+   border-bottom: 1px solid var(--border-color);
+  }
+  .navbar .logo {
+   font-size: 1.5rem;
+   font-weight: 700;
+   color: var(--text-primary);
+   font-family: 'Outfit', sans-serif;
+   letter-spacing: -0.5px;
+  }
+  .navbar .user-info {
+   display: flex;
+   align-items: center;
+   gap: 1.5rem;
+  }
+  .navbar .user-info span {
+   font-weight: 500;
+   color: var(--text-secondary);
+  }
+  .logout-btn {
+   background: transparent;
+   border: 1px solid var(--border-color);
+   padding: 0.5rem 1.2rem;
+   cursor: pointer;
+   font-size: 0.9rem;
+   font-weight: 500;
+   color: var(--text-primary);
+   transition: var(--transition);
+   font-family: 'Inter', sans-serif;
+  }
+  .logout-btn:hover {
+   background: var(--bg-tertiary);
+   transform: translateY(-1px);
+  }
+  .main-content {
+   padding: 3rem;
+   max-width: 1200px;
+   margin: 0 auto;
+  }
+  .card {
+   background: var(--bg-primary);
+   border: 1px solid var(--border-color);
+   border-radius: 12px;
+   padding: 2rem;
+   margin-bottom: 1.5rem;
+   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+   margin: 0 0 0.4rem;
+   font-family: 'Outfit', sans-serif;
+   font-size: 1.4rem;
+   font-weight: 600;
+  }
+  .card .subtitle {
+   color: var(--text-tertiary);
+   font-size: 0.85rem;
+   margin: 0 0 1.5rem;
+  }
+  .card-header {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   margin-bottom: 2rem;
+  }
+  .card-header .badge {
+   font-size: 0.75rem;
+   padding: 0.35rem 0.85rem;
+   border-radius: 100px;
+   font-weight: 500;
+  }
+  .badge-pending {
+   background: #fff3cd;
+   color: #856404;
+  }
+  .badge-completed {
+   background: #d4edda;
+   color: #155724;
+  }
+  .badge-processing {
+   background: #d1ecf1;
+   color: #0c5460;
+  }
+  .btn {
+   display: inline-flex;
+   align-items: center;
+   gap: 0.4rem;
+   padding: 0.6rem 1.2rem;
+   border: none;
+   border-radius: 8px;
+   cursor: pointer;
+   font-size: 0.9rem;
+   font-weight: 500;
+   font-family: 'Inter', sans-serif;
+   transition: var(--transition);
+   text-decoration: none;
+   line-height: 1.2;
+  }
+  .btn-primary {
+   background: var(--accent-dark);
+   color: #fff;
+  }
+  .btn-primary:hover {
+   background: #333;
+   transform: translateY(-1px);
+  }
+  .btn-secondary {
+   background: var(--accent-light);
+   color: var(--text-primary);
+   border: 1px solid var(--border-color);
+  }
+  .btn-secondary:hover {
+   background: #e8e8e8;
+   transform: translateY(-1px);
+  }
+  .btn-sm {
+   padding: 0.35rem 0.7rem;
+   font-size: 0.8rem;
+  }
+  .table-wrap {
+   overflow-x: auto;
+  }
+  table {
+   width: 100%;
+   border-collapse: collapse;
+   font-size: 0.9rem;
+   min-width: 600px;
+  }
+  th {
+   text-align: left;
+   padding: 0.75rem 1rem;
+   border-bottom: 2px solid var(--border-color);
+   font-weight: 600;
+   font-size: 0.8rem;
+   color: var(--text-tertiary);
+   text-transform: uppercase;
+   letter-spacing: 0.3px;
+  }
+  td {
+   padding: 0.75rem 1rem;
+   border-bottom: 1px solid var(--border-color);
+   color: var(--text-secondary);
+  }
+  tr:last-child td {
+   border-bottom: none;
+  }
+  tr:hover td {
+   background: var(--bg-secondary);
+  }
+  .history-loading {
+   text-align: center;
+   padding: 3rem;
+   color: var(--text-tertiary);
+  }
+  .history-empty {
+   text-align: center;
+   padding: 3rem;
+   color: var(--text-tertiary);
+  }
+  .history-error {
+   text-align: center;
+   padding: 1.5rem;
+   color: #c0392b;
+   background: #fdf0ef;
+   border-radius: 8px;
+   border: 1px solid #f5c6cb;
+  }
+  .actions-actions {
+   display: flex;
+   gap: 0.5rem;
+   flex-wrap: wrap;
+  }
+  .card-actions {
+   display: flex;
+   gap: 1rem;
+   margin-top: 1.5rem;
+   flex-wrap: wrap;
+  }
+  .grid-2 {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+   gap: 1rem;
+  }
+ </style>
+</head>
+<body>
+ <nav class="navbar">
+  <div class="logo">Report2Plot</div>
+   <div class="user-info">
+    <span id="navUsername">User</span>
+    <a href="/settings" class="logout-btn" style="text-decoration: none;">Edit Profile</a>
+    <button class="logout-btn" onclick="handleLogout()">Logout</button>
+    <button class="logout-btn" onclick="deleteAccount()" style="border-color: #ff5555; color: #ff5555;">Delete Account</button>
+   </div>
+ </nav>
+
+ <main class="main-content">
+  <!-- Welcome Card -->
+  <div class="card">
+   <h2 id="welcomeTitle">Welcome back, <span id="welcomeName">User</span></h2>
+   <p class="subtitle">Your test analysis workspace is ready. Choose an action below to get started.</p>
+   <div class="card-actions">
+    <a href="/description_page.html" class="btn btn-primary">+ New Analysis</a>
+    <a href="/rag-chat" id="ragBtn" class="btn btn-secondary" onclick="checkRagAccess(event)">
+     <span id="ragBadge">RAG Assistant</span>
+    </a>
+   </div>
+  </div>
+
+  <!-- Report History Card -->
+  <div class="card">
+   <div class="card-header">
+    <div>
+     <h2>Report History</h2>
+     <p class="subtitle" style="margin:0;">Your recently generated reports and analyses</p>
+    </div>
+    <span class="badge badge-pending" id="historyCount">Loading…</span>
+   </div>
+   <div class="table-wrap">
+    <div id="history-loading" class="history-loading">Loading reports…</div>
+    <div id="history-list" class="table-wrap" style="display:none;">
+     <table>
+      <thead>
+       <tr>
+        <th>Report Name</th>
+        <th>Exam</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th style="text-align:right;">Actions</th>
+       </tr>
+      </thead>
+      <tbody id="history-tbody"></tbody>
+     </table>
+    </div>
+    <div id="history-empty" class="history-empty" style="display:none;">
+     <p>No reports yet. Start your first analysis to see it here.</p>
+     <a href="/description_page.html" class="btn btn-primary" style="margin-top:1rem;display:inline-flex;">+ Start First Analysis</a>
+    </div>
+    <div id="history-error" class="history-error" style="display:none;"></div>
+   </div>
+  </div>
+ </main>
+
+ <script>
+  let hasHistory = false;
+  let currentUserData = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+   fetch('/api/auth/session?t=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+     if (!data.user_id) {
+      window.location.href = '/login_page.html';
+      return;
+     }
+     currentUserData = data;
+     if(document.getElementById('navUsername')) document.getElementById('navUsername').textContent = data.username || 'User';
+     if(document.getElementById('welcomeName')) document.getElementById('welcomeName').textContent = data.username || 'User';
+     if(document.getElementById('profName')) document.getElementById('profName').textContent = data.username || 'User';
+     if(document.getElementById('profEmail')) document.getElementById('profEmail').textContent = data.email || '-';
+     if(document.getElementById('profDob')) document.getElementById('profDob').textContent = data.dob || '-';
+     if(document.getElementById('profClass')) document.getElementById('profClass').textContent = data.class || '-';
+     if(document.getElementById('profSchool')) document.getElementById('profSchool').textContent = data.school || '-';
+     if(document.getElementById('profId')) document.getElementById('profId').textContent = data.user_id;
+    })
+    .catch(() => {
+     window.location.href = '/login_page.html';
+    });
+
+   fetch('/api/history')
+    .then(r => r.json())
+    .then(data => {
+     if(data.has_history || (data.items && data.items.length > 0)) {
+      hasHistory = true;
+      const ragBtn = document.getElementById('ragBtn');
+      const ragBadge = document.getElementById('ragBadge');
+      ragBadge.textContent = 'RAG Assistant';
+      ragBtn.classList.remove('disabled');
+      ragBtn.classList.remove('btn-secondary');
+      ragBtn.classList.add('btn-primary');
+     }
+     loadDashboardHistory(data);
+    })
+    .catch(e => {
+     console.error(e);
+     showHistoryError('Could not load history. Please refresh.');
+    });
+  });
+
+  function loadDashboardHistory(data) {
+   const loading = document.getElementById('history-loading');
+   const list = document.getElementById('history-list');
+   const empty = document.getElementById('history-empty');
+   const error = document.getElementById('history-error');
+   const tbody = document.getElementById('history-tbody');
+   const countBadge = document.getElementById('historyCount');
+
+   loading.style.display = 'none';
+   error.style.display = 'none';
+
+   const items = (data.items || []).filter(Boolean);
+
+   if (!items.length) {
+    empty.style.display = '';
+    countBadge.textContent = '0 reports';
+    return;
+   }
+
+   countBadge.textContent = `${items.length} report${items.length !== 1 ? 's' : ''}`;
+   empty.style.display = 'none';
+   list.style.display = '';
+   tbody.innerHTML = '';
+
+   items.forEach(item => {
+    const tr = document.createElement('tr');
+    const name = item.display_name || 'Untitled Report';
+    const exams = (item.exam_names || []).filter(Boolean);
+    const exam = exams.length ? exams.join(', ') : '—';
+    const date = item.updated_at || item.created_at || '—';
+    const reportId = item.report_id || item.id || name;
+
+    tr.innerHTML = `
+     <td><strong>${escapeHtml(name)}</strong></td>
+     <td>${escapeHtml(exam)}</td>
+     <td><span class="badge badge-completed">Completed</span></td>
+     <td>${escapeHtml(date)}</td>
+     <td style="text-align:right;">
+      <a href="/exam_detail_page.html?report_id=${encodeURIComponent(reportId)}&name=${encodeURIComponent(name)}" class="btn btn-sm btn-secondary">View</a>
+     </td>
+    `;
+    tbody.appendChild(tr);
+   });
+  }
+
+  function showHistoryError(msg) {
+   document.getElementById('history-loading').style.display = 'none';
+   const el = document.getElementById('history-error');
+   el.textContent = msg;
+   el.style.display = '';
+  }
+
+  function escapeHtml(text) {
+   if (!text) return '';
+   const div = document.createElement('div');
+   div.textContent = text;
+   return div.innerHTML;
+  }
+
+  function checkRagAccess(e) {
+   if (!hasHistory) {
+    e.preventDefault();
+    alert("Complete at least one test analysis before talking with the assistant.");
+   }
+  }
+
+  function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function handleLogout() {
+   if (confirm('Sign out of Report2Plot?')) {
+    fetch('/api/auth/logout', { method: 'POST' })
+     .then(() => window.location.href = '/login_page.html');
+   }
+  }
+ async function deleteAccount() {
+ if(confirm("Are you ABSOLUTELY sure you want to permanently delete your account? This will wipe all your data, analysis history, and files. This action cannot be undone.")) {
+  if(confirm("Final warning: Delete account forever?")) {
+   const modal = document.getElementById('delete-modal');
+   const logsDiv = document.getElementById('delete-logs');
+   modal.classList.add('active');
+   logsDiv.innerHTML = '';
+   const logs = [
+    "=== Report2Plot Factory Reset ===",
+    "This will clear all generated reports, extracted local memory, and student data.",
+    "Connecting to Supabase to purge user data..."
+   ];
+   for (let i = 0; i < logs.length; i++) {
+    const p = document.createElement('div');
+    p.textContent = logs[i];
+    logsDiv.appendChild(p);
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+    await new Promise(r => setTimeout(r, 200));
+   }
+   try {
+    const res = await fetch('/api/auth/delete_account', { method: 'POST' });
+    const data = await res.json();
+    const p = document.createElement('div');
+    p.textContent = data.error || "Factory reset complete! Redirecting...";
+    p.style.color = data.error ? '#ff5555' : '#55ff55';
+    logsDiv.appendChild(p);
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+    await new Promise(r => setTimeout(r, 1200));
+    if(data.error) {
+     alert(data.error);
+     modal.classList.remove('active');
+    } else {
+     window.location.href = '/login_page.html';
+    }
+   } catch(err) {
+    alert("Failed to delete account");
+    modal.classList.remove('active');
+   }
+  }
+ }
+}
+
+</script>
+<!-- Delete Modal -->
+<div id="delete-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: var(--bg-primary); padding: 2rem; border-radius: 12px; max-width: 500px; width: 90%; color: var(--text-primary); font-family: monospace;">
+        <h3 style="margin-top: 0; font-family: 'Outfit', sans-serif;">Deleting Account...</h3>
+        <div id="delete-logs" style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.85rem;"></div>
+    </div>
+</div>
+<script>
+    // CSS to handle the modal active state
+    document.head.insertAdjacentHTML('beforeend', '<style>#delete-modal.active { display: flex !important; }</style>');
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+    "mcpServers": {
+        "file-watcher": {
+            "transport": "stdio",
+            "command": "python",
+            "args": [
+                "mcp_servers/file_watcher.py"
+            ],
+            "enabled": true
+        },
+        "vision-extractor": {
+            "transport": "stdio",
+            "command": "python",
+            "args": [
+                "mcp_servers/vision_extractor.py"
+            ],
+            "enabled": true
+        },
+        "plot-renderer": {
+            "transport": "stdio",
+            "command": "python",
+            "args": [
+                "mcp_servers/plot_renderer.py"
+            ],
+            "enabled": true
+        }
+    }
+}

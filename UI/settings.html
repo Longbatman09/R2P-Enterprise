@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Report2Plot - Account Settings</title>
+ <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+ <style>
+  :root {
+   --bg-primary: #ffffff;
+   --bg-secondary: #f9f9f9;
+   --bg-tertiary: #f3f3f3;
+   --text-primary: #000000;
+   --text-secondary: #404040;
+   --text-tertiary: #707070;
+   --border-color: #e0e0e0;
+   --accent-dark: #000000;
+   --accent-light: #f0f0f0;
+   --transition: all 150ms ease;
+  }
+  body, html {
+   margin: 0;
+   padding: 0;
+   height: 100%;
+   font-family: 'Inter', 'Outfit', sans-serif;
+   background-color: var(--bg-primary);
+   color: var(--text-primary);
+  }
+  .navbar {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   padding: 1.5rem 3rem;
+   background: var(--bg-secondary);
+   border-bottom: 1px solid var(--border-color);
+  }
+  .navbar .logo {
+   font-size: 1.5rem;
+   font-weight: 700;
+   color: var(--text-primary);
+   font-family: 'Outfit', sans-serif;
+   letter-spacing: -0.5px;
+  }
+  .navbar .user-info {
+   display: flex;
+   align-items: center;
+   gap: 1.5rem;
+  }
+  .main-content {
+   padding: 3rem;
+   max-width: 600px;
+   margin: 0 auto;
+  }
+  .card {
+   background: var(--bg-primary);
+   border: 1px solid var(--border-color);
+   border-radius: 12px;
+   padding: 2rem;
+   margin-bottom: 1.5rem;
+   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+   margin: 0 0 0.4rem;
+   font-family: 'Outfit', sans-serif;
+   font-size: 1.4rem;
+   font-weight: 600;
+  }
+  .card .subtitle {
+   color: var(--text-tertiary);
+   font-size: 0.85rem;
+   margin: 0 0 1.5rem;
+  }
+  .form-group {
+      margin-bottom: 1.2rem;
+  }
+  .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+  }
+  .form-group input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+  }
+  .form-group input:focus {
+      outline: none;
+      border-color: var(--accent-dark);
+  }
+  .btn {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   gap: 0.4rem;
+   padding: 0.75rem 1.2rem;
+   border: none;
+   border-radius: 8px;
+   cursor: pointer;
+   font-size: 0.9rem;
+   font-weight: 500;
+   font-family: 'Inter', sans-serif;
+   transition: var(--transition);
+   text-decoration: none;
+   line-height: 1.2;
+   width: 100%;
+  }
+  .btn-primary {
+   background: var(--accent-dark);
+   color: #fff;
+  }
+  .btn-primary:hover {
+   background: #333;
+   transform: translateY(-1px);
+  }
+  .btn-secondary {
+   background: transparent;
+   color: var(--text-primary);
+   border: 1px solid var(--border-color);
+   width: auto;
+  }
+  .btn-secondary:hover {
+   background: var(--bg-tertiary);
+   transform: translateY(-1px);
+  }
+  .alert {
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+  }
+ </style>
+</head>
+<body>
+ <nav class="navbar">
+  <div class="logo">Report2Plot</div>
+  <div class="user-info">
+   <a href="/dashboard.html" class="btn btn-secondary" style="padding: 0.5rem 1.2rem;">&larr; Back to Dashboard</a>
+  </div>
+ </nav>
+
+ <main class="main-content">
+  <div class="card">
+   <h2>Edit Profile</h2>
+   <p class="subtitle">Update your account details below.</p>
+   
+   <div id="alertBox" class="alert"></div>
+
+   <form id="profileForm">
+    <div class="form-group">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" required>
+    </div>
+    <div class="form-group">
+        <label for="dob">Date of Birth</label>
+        <input type="date" id="dob" required>
+    </div>
+    <div class="form-group">
+        <label for="student_class">Class</label>
+        <input type="text" id="student_class" required>
+    </div>
+    <div class="form-group">
+        <label for="school">School</label>
+        <input type="text" id="school" required>
+    </div>
+    <button type="submit" class="btn btn-primary" id="saveBtn">Save Changes</button>
+   </form>
+  </div>
+ </main>
+
+ <script>
+  function showAlert(msg, isError=true) {
+      const box = document.getElementById('alertBox');
+      box.style.display = 'block';
+      box.style.backgroundColor = isError ? 'rgba(255, 50, 50, 0.1)' : 'rgba(50, 255, 50, 0.1)';
+      box.style.color = isError ? '#cc0000' : '#008800';
+      box.style.border = isError ? '1px solid #ff5555' : '1px solid #55ff55';
+      box.innerText = msg;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+   const today = new Date().toISOString().split('T')[0];
+   const dobInput = document.getElementById('dob');
+   if (dobInput) dobInput.setAttribute('max', today);
+
+   fetch('/api/auth/session?t=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+     if (!data.user_id) {
+      window.location.href = '/login_page.html';
+      return;
+     }
+     if (document.getElementById('name')) document.getElementById('name').value = data.username || '';
+     if (document.getElementById('dob')) document.getElementById('dob').value = data.dob || '';
+     if (document.getElementById('student_class')) document.getElementById('student_class').value = data.class || '';
+     if (document.getElementById('school')) document.getElementById('school').value = data.school || '';
+    })
+    .catch(() => {
+     window.location.href = '/login_page.html';
+    });
+  });
+
+  document.getElementById('profileForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveBtn');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = 'Saving...';
+      saveBtn.disabled = true;
+
+      const payload = {
+          name: document.getElementById('name').value,
+          dob: document.getElementById('dob').value,
+          class: document.getElementById('student_class').value,
+          school: document.getElementById('school').value
+      };
+
+      try {
+          const res = await fetch('/api/auth/update_account', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if(res.ok) {
+              showAlert('Profile updated successfully!', false);
+          } else {
+              showAlert(data.error || 'Failed to update profile');
+          }
+      } catch(err) {
+          showAlert('Network error');
+      } finally {
+          saveBtn.textContent = originalText;
+          saveBtn.disabled = false;
+      }
+  });
+ </script>
+</body>
+</html>

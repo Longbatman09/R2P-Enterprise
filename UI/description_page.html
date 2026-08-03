@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Report Setup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #f1f3f5;
+            --text-primary: #121212;
+            --text-secondary: #333333;
+            --text-tertiary: #555555;
+            --border-color: #dee2e6;
+            --accent-dark: #000000;
+            --accent-light: rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .wizard-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            background: var(--bg-primary);
+        }
+
+        .wizard-sidebar {
+            width: 35%;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 3rem 0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .wizard-header {
+            padding: 0 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .user-profile {
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            border-top: 1px solid var(--border-color);
+            background: rgba(138, 43, 226, 0.05);
+        }
+        .user-profile h3 {
+            font-size: 1rem;
+            margin-bottom: 0.2rem;
+            color: var(--primary);
+        }
+        .user-profile p {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+        }
+        .logout-link {
+            font-size: 0.8rem;
+            color: #d32f2f;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 0.5rem;
+            display: inline-block;
+        }
+
+        .wizard-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .wizard-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+            line-height: 1.4;
+        }
+
+        .wizard-steps {
+            flex: 1;
+            padding: 0 1rem;
+        }
+
+        .step-item {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+            color: var(--text-tertiary);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .step-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .step-item.active {
+            background: var(--accent-light);
+            color: var(--text-primary);
+            border-left-color: var(--accent-dark);
+            font-weight: 600;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: var(--bg-tertiary);
+            border-radius: 50%;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 0.75rem;
+        }
+
+        .step-item.active .step-number {
+            background: var(--accent-dark);
+            color: var(--bg-primary);
+        }
+
+        .wizard-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .wizard-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .wizard-page {
+            opacity: 0;
+            transform: translateX(30px);
+            pointer-events: none;
+            transition: var(--transition);
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .wizard-page.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            height: auto;
+        }
+
+        .page-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.7px;
+        }
+
+        .page-description {
+            font-size: 1rem;
+            color: var(--text-tertiary);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 1.75rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-dark);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .input-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .file-badge {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .file-badge:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-dark);
+        }
+
+        .upload-dropzone {
+            border: 1.5px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            background: linear-gradient(180deg, var(--bg-secondary), var(--bg-primary));
+            transition: var(--transition);
+            margin-bottom: 1rem;
+        }
+
+        .upload-dropzone.active {
+            border-color: var(--accent-dark);
+            background: var(--accent-light);
+        }
+
+        .upload-dropzone-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-dropzone-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .upload-dropzone-copy {
+            font-size: 0.92rem;
+            color: var(--text-tertiary);
+            line-height: 1.5;
+        }
+
+        .upload-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .selected-files-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .selected-file-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 0.9rem;
+            border-radius: 999px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            max-width: 100%;
+        }
+
+        .selected-file-pill span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 320px;
+        }
+
+        .selected-file-remove {
+            border: none;
+            background: transparent;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .upload-status {
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 28px;
+            margin-left: 1rem;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            border-radius: 34px;
+            transition: var(--transition);
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--bg-primary);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--accent-dark);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+
+        .option-info h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .option-info p {
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .radio-label:hover {
+            background: var(--bg-secondary);
+        }
+
+        .radio-label input {
+            margin: 0;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent-dark);
+        }
+
+        .wizard-footer {
+            padding: 2rem 3rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-secondary);
+        }
+
+        .btn {
+            padding: 0.85rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: var(--accent-dark);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #333333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-secondary);
+            border-color: var(--accent-dark);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 3px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-dark);
+            transition: width 0.4s ease;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-box {
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 2.5rem;
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.3s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-dark);
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            animation: spin 1s linear infinite;
+        }
+
+        .modal-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .modal-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-tertiary);
+            margin-bottom: 1.5rem;
+        }
+
+        .result-list {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+
+        .result-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .wizard-sidebar {
+                width: 240px;
+                padding: 2rem 0;
+            }
+
+            .wizard-content {
+                padding: 2rem;
+            }
+
+            .wizard-footer {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .wizard-container {
+                flex-direction: column;
+            }
+
+            .wizard-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 1.5rem;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 2rem;
+                max-height: 100px;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+
+            .wizard-header {
+                padding: 0;
+                margin-bottom: 0;
+                flex-shrink: 0;
+            }
+
+            .wizard-title {
+                font-size: 1.25rem;
+            }
+
+            .wizard-subtitle {
+                display: none;
+            }
+
+            .wizard-steps {
+                flex: 1;
+                padding: 0;
+                display: flex;
+                gap: 0;
+                overflow-x: auto;
+            }
+
+            .step-item {
+                margin-bottom: 0;
+                white-space: nowrap;
+                padding: 0.75rem 1rem;
+            }
+
+            .wizard-content {
+                padding: 2rem 1.5rem;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .input-group {
+                grid-template-columns: 1fr;
+            }
+
+            .files-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .intro-slide {
+            animation: introFadeIn 0.4s ease;
+        }
+        @keyframes introFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .intro-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-dark);
+            opacity: 0.3;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .intro-dot.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-container">
+        <div class="wizard-main">
+            <div class="wizard-content">
+
+            <div style="max-width: 700px; width: 100%; margin: 0 auto; padding-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <div class="wizard-header">
+                <div class="wizard-title">Report2Plot</div>
+                <div class="wizard-subtitle">Setup & Validation</div>
+            </div>
+                    <div class="user-profile" id="userProfile" style="display: none; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin: 0;">
+                <h3 id="profileName" style="font-size: 0.9rem; margin: 0;">Loading...</h3>
+                <p id="profileDevice" style="font-size: 0.75rem; color: var(--text-tertiary); margin: 0.25rem 0;">Loading...</p>
+                <a class="logout-link" onclick="logout()" style="font-size: 0.8rem; color: var(--accent-dark); cursor: pointer;">Sign Out</a>
+            </div>
+                </div>
+
+                <div class="wizard-page active" data-page="0" style="display: block; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem;">
+                    <h1 class="page-title">Upload Marksheet PDFs</h1>
+                    <p class="page-description">Drop report files here or browse from your computer, then choose the student from the directory.</p>
+
+                    <div class="form-group">
+                        <label>Selected Reports</label>
+                        <div class="upload-dropzone" id="upload-dropzone">
+                            <input type="file" id="report-file-input" multiple accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
+                            <div class="upload-dropzone-header">
+                                <div>
+                                    <div class="upload-dropzone-title">Drag and drop reports here</div>
+                                    <div class="upload-dropzone-copy">or browse to pick PDFs and images from this device.</div>
+                                </div>
+                                <div class="upload-actions">
+                                    <label for="report-file-input" class="btn btn-secondary" style="display: inline-block; cursor: pointer; margin-bottom: 0;">Browse Files</label>
+                                    <button type="button" class="btn btn-secondary" onclick="clearSelectedFiles()" id="clear-files-btn" disabled>Clear</button>
+                                </div>
+                            </div>
+                            <div class="upload-dropzone-copy">Files are uploaded to the local analyzer as soon as you select them. Nothing from the server input folder is shown here.</div>
+                        </div>
+                        <div id="selected-files-list" class="selected-files-list">
+                            <div class="upload-status">No files selected yet.</div>
+                        </div>
+                        <div id="upload-status" class="upload-status"></div>
+                        <div id="scan-status" style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-secondary); display: none;"></div>
+                        <div id="scan-error" style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; color: #fca5a5; font-size: 0.9rem; display: none;"></div>
+                    </div>
+                </div>
+
+
+
+                <div class="wizard-page" data-page="1" style="display: none;">
+                    <h1 class="page-title">Extraction Summary</h1>
+                    <p class="page-description">Review the detected files and the fields found in the marksheets</p>
+
+                    <div id="data-fields-container">
+                        <p style="color: var(--text-tertiary); text-align: center; padding: 2rem;">
+                            Return to Step 1 and scan files to auto-detect the available report fields
+                        </p>
+                    </div>
+                </div>
+
+                <div class="wizard-page" data-page="2" style="display: block;">
+                    <h1 class="page-title">Output Settings</h1>
+                    <p class="page-description">Choose how the final student report should be saved</p>
+
+                    <div class="form-group">
+                        <label>Output Format</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="output_format" value="charts" checked>
+                                Matplotlib Charts
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="output_format" value="markdown">
+                                Markdown files
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="output_format" value="both">
+                                Both
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Report Notes</label>
+                        <p style="font-size: 0.9rem; color: var(--text-tertiary); margin-bottom: 0.75rem;">Optional note to preserve alongside the generated student report.</p>
+                        <textarea id="extra_description" placeholder="Add optional notes for the final report..."></textarea>
+                    </div>
+                </div>
+
+                <div class="wizard-page" data-page="3" style="display: none;">
+                    <h1 class="page-title">Ready to Generate</h1>
+                    <p class="page-description">Review your settings and generate the student report</p>
+
+                    <div id="review-summary" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem;">
+                        <p style="color: var(--text-tertiary); text-align: center;">Loading summary...</p>
+                    </div>
+                </div>
+            </div>
+
+            </div>
+            <div class="wizard-footer" style="justify-content: center;">
+                <button class="btn btn-primary" id="start-analysis-btn" onclick="runAnalysis()" style="width: 100%; max-width: 400px; display: block; margin: 0 auto;">Start Full Analysis</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="processing-modal" style="background: rgba(0,0,0,0.85); align-items: stretch; padding: 0;">
+        <div id="live-analysis-screen" style="display: flex; width: 100vw; height: 100vh; color: white; background: #000;">
+            <!-- Left Panel (~35%) -->
+            <div style="width: 35%; padding: 3rem; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1); overflow-y: auto;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+                    <div class="spinner" id="modal-spinner" style="border-top-color: white; margin: 0;"></div>
+                    <h2 id="modal-title" style="font-size: 1.5rem; font-weight: bold; letter-spacing: 2px; margin: 0;">ANALYZING...</h2>
+                </div>
+                
+                <p class="modal-subtitle" id="modal-status" style="display: none;">Processing documents...</p>
+                
+                <div id="live-comments" style="flex: 1; margin-top: 1rem; overflow-y: auto; font-family: monospace; font-size: 0.9rem; color: #a1a1aa; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 1rem;">
+                    <!-- Live comments will be appended here -->
+                </div>
+                
+                <div class="progress-bar" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 1.5rem; flex-shrink: 0;" id="modal-progress-container">
+                    <div class="progress-fill" id="modal-progress-bar" style="width: 0%; height: 100%; background: #4f46e5; transition: width 0.3s;"></div>
+                </div>
+                
+                <div id="results-container" style="display: none; margin-top: 1.5rem; flex-shrink: 0; color: #e4e4e7;">
+                    <p style="font-weight: 600; margin-bottom: 1rem;">Generated Deliverables:</p>
+                    <div class="result-list" id="results-list" style="color: black; background: transparent; padding: 0;"></div>
+                </div>
+
+                <div style="margin-top: 2rem; display: none; flex-shrink: 0;" id="modal-actions">
+                    <button class="btn btn-primary" onclick="closeModal()" style="width: 100%;">Complete</button>
+                </div>
+            </div>
+
+            <!-- Right Panel (~65%) -->
+            <div style="width: 65%; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #18181b; position: relative;">
+                <div id="live-view-area" style="width: 100%; height: 100%; position: relative; overflow: hidden; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: none;">
+                    <iframe id="live-doc-frame" src="about:blank" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background: white; transition: opacity 0.8s ease-in-out; pointer-events: none;"></iframe>
+                    <div id="live-md-frame" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background: #27272a; padding: 2rem; overflow-y: auto; opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; font-family: monospace; white-space: pre-wrap; font-size: 0.95rem; color: #e4e4e7;"></div>
+                    <div id="live-json-frame" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background: #27272a; padding: 2rem; overflow-y: auto; opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; font-family: monospace; white-space: pre-wrap; font-size: 0.95rem; color: #a3e635;"></div>
+                </div>
+                <div id="live-view-placeholder" style="color: #52525b; font-family: monospace; font-size: 1.1rem; letter-spacing: 1px;">
+                    WAITING FOR DOCUMENT...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="intro-modal">
+        <div class="modal-box" style="width: 100vw; height: 100vh; max-width: none; border: none; border-radius: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 3rem; box-shadow: none;">
+            <div style="width: 100%; max-width: 580px; display: flex; flex-direction: column; height: auto;">
+                <!-- Slides Container -->
+                <div id="intro-slides">
+                    <!-- Slide 1 -->
+                    <div class="intro-slide active" data-slide="0" style="text-align: center;">
+                        <div style="font-size: 3.5rem; margin-bottom: 1.5rem;"></div>
+                        <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Welcome to Report2Plot</h2>
+                        <p style="color: var(--text-secondary); font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                            Upload marksheet PDFs, resolve the student from the directory, extract per-test results, and render a clean student report JSON plus Markdown summary.
+                        </p>
+                    </div>
+                    <!-- Slide 2 -->
+                    <div class="intro-slide" data-slide="1" style="display: none;">
+                        <div style="font-size: 3.5rem; text-align: center; margin-bottom: 1.5rem;"></div>
+                        <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text-primary); text-align: center;">How it works</h2>
+                        <div style="margin: 1.5rem 0; font-size: 1.05rem; color: var(--text-secondary); line-height: 2.0;">
+                            <p style="margin-bottom: 0.85rem;"><strong>1. Upload Files:</strong> Drop at least two mark sheet PDFs or browse from your computer.</p>
+                            <p style="margin-bottom: 0.85rem;"><strong>2. Resolve Student:</strong> Enter a name or ID from <code>All_stud_details.json</code> and confirm the auto-filled identity fields.</p>
+                            <p style="margin-bottom: 0.85rem;"><strong>3. Generate Report:</strong> Review the detected fields, pick JSON or Markdown output, and generate the final student report.</p>
+                        </div>
+                    </div>
+                    <!-- Slide 3 -->
+                    <div class="intro-slide" data-slide="2" style="display: none; text-align: center;">
+                        <div style="font-size: 3.5rem; margin-bottom: 1.5rem;"></div>
+                        <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Ready to begin!</h2>
+                        <p style="color: var(--text-secondary); font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                            Everything is pre-configured and ready to turn raw marksheets into a structured student report.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Carousel Dot Indicators -->
+                <div style="display: flex; justify-content: center; gap: 0.5rem; margin: 1.5rem 0 2rem 0;">
+                    <span class="intro-dot active" data-dot="0" onclick="jumpToIntroSlide(0)"></span>
+                    <span class="intro-dot" data-dot="1" onclick="jumpToIntroSlide(1)"></span>
+                    <span class="intro-dot" data-dot="2" onclick="jumpToIntroSlide(2)"></span>
+                </div>
+
+                <!-- Action Controls -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                    <button type="button" class="btn btn-secondary" style="margin: 0; min-width: 90px; padding: 0.5rem 1rem;" onclick="closeIntroModal()">Skip</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" id="intro-prev-btn" class="btn btn-secondary" style="margin: 0; min-width: 90px; display: none; padding: 0.5rem 1rem;" onclick="navigateIntro(-1)">Prev</button>
+                        <button type="button" id="intro-next-btn" class="btn btn-primary" style="margin: 0; min-width: 90px; padding: 0.5rem 1rem;" onclick="navigateIntro(1)">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 0;
+        const totalSteps = 4;
+        let commonStudents = [];
+        let studentDirectory = [];
+        let isScanned = false;
+        let pollInterval = null;
+        let selectedFiles = [];
+
+        function openFilePicker() {
+            document.getElementById('report-file-input').click();
+        }
+
+        function openFilePicker() {
+            document.getElementById('report-file-input').click();
+        }
+
+        function renderSelectedFiles() {
+            const list = document.getElementById('selected-files-list');
+            const clearBtn = document.getElementById('clear-files-btn');
+            const status = document.getElementById('upload-status');
+
+            list.innerHTML = '';
+
+            if (!selectedFiles.length) {
+                list.innerHTML = '<div class="upload-status">No files selected yet.</div>';
+                clearBtn.disabled = true;
+                status.textContent = '';
+                return;
+            }
+
+            selectedFiles.forEach(fileName => {
+                const pill = document.createElement('div');
+                pill.className = 'selected-file-pill';
+
+                const label = document.createElement('span');
+                label.title = fileName;
+                label.textContent = fileName;
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'selected-file-remove';
+                removeButton.setAttribute('aria-label', `Remove ${fileName}`);
+                removeButton.textContent = '×';
+                removeButton.addEventListener('click', () => removeSelectedFile(fileName));
+
+                pill.appendChild(label);
+                pill.appendChild(removeButton);
+                list.appendChild(pill);
+            });
+
+            clearBtn.disabled = false;
+            status.textContent = `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'} ready for analysis.`;
+        }
+
+        async function uploadSelectedFiles(fileList) {
+            const files = Array.from(fileList || []).filter(file => /\.(pdf|png|jpe?g)$/i.test(file.name));
+            if (!files.length) {
+                throw new Error('Select at least one PDF or image file.');
+            }
+
+            const base64Files = await Promise.all(files.map(async file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve({ name: file.name, data: reader.result.split(',')[1] });
+                    reader.readAsDataURL(file);
+                });
+            }));
+
+            document.getElementById('upload-status').textContent = 'Uploading selected files...';
+
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files: base64Files })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to upload selected files.');
+            }
+
+            data.files.forEach(fileName => {
+                if (!selectedFiles.includes(fileName)) {
+                    selectedFiles.push(fileName);
+                }
+            });
+            selectedFiles.sort((a, b) => a.localeCompare(b));
+            renderSelectedFiles();
+        }
+
+        async function handleFileSelection(fileList) {
+            try {
+                await uploadSelectedFiles(fileList);
+                document.getElementById('scan-error').style.display = 'none';
+            } catch (err) {
+                document.getElementById('upload-status').textContent = '';
+                document.getElementById('scan-error').style.display = 'block';
+                document.getElementById('scan-error').textContent = `Error: ${err.message}`;
+            }
+        }
+
+        function clearSelectedFiles() {
+            selectedFiles = [];
+            renderSelectedFiles();
+            document.getElementById('report-file-input').value = '';
+            document.getElementById('scan-error').style.display = 'none';
+        }
+
+        function removeSelectedFile(fileName) {
+            selectedFiles = selectedFiles.filter(name => name !== fileName);
+            renderSelectedFiles();
+        }
+
+        function scanSelectedFiles() {
+            isScanned = false;
+            isScanned = false;
+            runScanWithLoading();
+        }
+
+        
+
+        function updateReviewSummary() {
+            const summary = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div>
+                        <p style="font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem;">Student</p>
+                        <p style="font-weight: 600;">${document.getElementById('profileName').innerText}</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem;">Output</p>
+                        <p style="font-weight: 600;">${document.querySelector('input[name="output_format"]:checked').value.toUpperCase()}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('review-summary').innerHTML = summary;
+        }
+
+        async function runScanWithLoading() {
+            const modal = document.getElementById('processing-modal');
+            const spinner = document.getElementById('modal-spinner');
+            const title = document.getElementById('modal-title');
+            const status = document.getElementById('modal-status');
+            const progressContainer = document.getElementById('modal-progress-container');
+            const resultsContainer = document.getElementById('results-container');
+            const modalActions = document.getElementById('modal-actions');
+            const statusDiv = document.getElementById('scan-status');
+            const errorDiv = document.getElementById('scan-error');
+            let scanPollInterval = null;
+
+            modal.classList.add('active');
+            spinner.style.display = 'block';
+            title.textContent = 'Scanning Input Reports';
+            status.textContent = 'Reading files and converting via LLMWhisperer (approx. 5-15 seconds)...';
+            progressContainer.style.display = 'block';
+            document.getElementById('modal-progress-bar').style.width = '0%';
+            resultsContainer.style.display = 'none';
+            modalActions.style.display = 'none';
+            
+            document.getElementById('live-comments').innerHTML = '';
+            document.getElementById('live-view-placeholder').style.display = 'block';
+            document.getElementById('live-view-area').style.display = 'none';
+            document.getElementById('live-doc-frame').src = 'about:blank';
+            document.getElementById('live-md-frame').textContent = '';
+
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = 'Scanning...';
+            errorDiv.style.display = 'none';
+
+            if (selectedFiles.length < 1) {
+                clearInterval(scanPollInterval);
+                modal.classList.remove('active');
+                isScanned = false;
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Error: Select at least 1 report file first.';
+                return;
+            }
+
+            let currentFileScanning = null;
+            scanPollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await fetch('/api/state');
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+                        if (statusData.stage === 'scanning') {
+                            const msg = statusData.message || 'Scanning...';
+                            status.textContent = msg;
+                            
+                            // Update live comments
+                            const commentsDiv = document.getElementById('live-comments');
+                            if (!commentsDiv.lastChild || commentsDiv.lastChild.textContent !== '> ' + msg) {
+                                const p = document.createElement('div');
+                                p.textContent = '> ' + msg;
+                                commentsDiv.appendChild(p);
+                                commentsDiv.scrollTop = commentsDiv.scrollHeight;
+                            }
+                            
+                            if (statusData.current_file && statusData.current_file !== currentFileScanning) {
+                                currentFileScanning = statusData.current_file;
+                                document.getElementById('live-view-placeholder').style.display = 'none';
+                                document.getElementById('live-view-area').style.display = 'block';
+                                const docFrame = document.getElementById('live-doc-frame');
+                                const mdFrame = document.getElementById('live-md-frame');
+                                const jsonFrame = document.getElementById('live-json-frame');
+                                docFrame.style.opacity = 0;
+                                docFrame.style.pointerEvents = 'none';
+                                docFrame.addEventListener('load', () => { 
+                                    docFrame.style.opacity = 1; 
+                                    docFrame.style.pointerEvents = 'auto';
+                                }, { once: true });
+                                docFrame.src = `/api/file?path=${encodeURIComponent(statusData.current_file)}`;
+                                if (mdFrame) {
+                                    mdFrame.style.opacity = 0;
+                                    mdFrame.style.pointerEvents = 'none';
+                                }
+                                if (jsonFrame) {
+                                    jsonFrame.style.opacity = 0;
+                                    jsonFrame.style.pointerEvents = 'none';
+                                }
+                            }
+                            
+                            if (statusData.progress_total > 0) {
+                                const percent = Math.round((statusData.progress_current / statusData.progress_total) * 100);
+                                document.getElementById('modal-progress-bar').style.width = percent + '%';
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Status poll error:", e);
+                }
+            }, 800);
+
+            try {
+                const res = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input_files: selectedFiles }),
+                });
+                const scanData = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(scanData.error || "Pre-scan failed.");
+                }
+
+                // Populate subjects checkboxes
+                const container = document.getElementById('data-fields-container');
+                const reportFields = scanData.common_fields && scanData.common_fields.length > 0 ? scanData.common_fields : [];
+                const reportFiles = scanData.selected_files && scanData.selected_files.length > 0 ? scanData.selected_files : selectedFiles;
+                container.innerHTML = `
+                    <div class="summary-box" style="margin-bottom: 1rem;">
+                        <p style="font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem;">Selected Files</p>
+                        <p style="font-weight: 600; margin-bottom: 0.75rem;">${reportFiles.length} file${reportFiles.length === 1 ? '' : 's'}</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${reportFiles.map(fileName => `<span class="item-badge">${fileName}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="summary-box">
+                        <p style="font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem;">Detected Fields</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${(reportFields.length > 0 ? reportFields : ['No common fields detected']).map(field => `<span class="item-badge">[${field}]</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+
+                // Sync commonStudents list and update datalist
+                commonStudents = scanData.common_students || [];
+                const datalist = document.getElementById('student_directory_list');
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    commonStudents.forEach(student => {
+                        const opt = document.createElement('option');
+                        opt.value = student.name;
+                        opt.textContent = student.id ? `ID: ${student.id} (Detected in files)` : ' (Detected in files)';
+                        datalist.appendChild(opt);
+                    });
+                    // Append rest of directory
+                    studentDirectory.forEach(student => {
+                        const alreadyAdded = commonStudents.some(s => s.name === student.student_name);
+                        if (!alreadyAdded) {
+                            const opt = document.createElement('option');
+                            opt.value = student.student_name || '';
+                            opt.textContent = student.student_id ? `ID: ${student.student_id}` : '';
+                            datalist.appendChild(opt);
+                        }
+                    });
+                }
+
+                clearInterval(scanPollInterval);
+                isScanned = true;
+                modal.classList.remove('active');
+
+                // Step 1 is now Extraction Summary
+                currentStep = 1;
+                statusDiv.innerHTML = `Scan complete. Detected ${scanData.common_fields ? scanData.common_fields.length : 0} fields. Click 'Next' to proceed.`;
+            } catch (err) {
+                console.error("Scan error:", err);
+                clearInterval(scanPollInterval);
+                isScanned = false;
+                modal.classList.remove('active');
+                
+                statusDiv.style.display = 'none';
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = `Error: ${err.message}`;
+            }
+        }
+
+        async function runAnalysis() {
+            if (selectedFiles.length < 1) {
+                document.getElementById('scan-error').style.display = 'block';
+                document.getElementById('scan-error').textContent = 'Error: upload at least 1 report file before analyzing.';
+                return;
+            }
+
+
+
+            const payload = {
+                workflow: 'student_report',
+                input_files: selectedFiles,
+                student: {
+                    name: document.getElementById('profileName').innerText
+                },
+                output: {
+                    format: document.querySelector('input[name="output_format"]:checked').value,
+                },
+                extra_description: document.getElementById('extra_description').value,
+            };
+
+            document.getElementById('processing-modal').classList.add('active');
+            document.getElementById('modal-spinner').style.display = 'block';
+            document.getElementById('modal-title').textContent = 'Analyzing Reports';
+            document.getElementById('modal-status').textContent = 'Submitting job to orchestrator backend...';
+            document.getElementById('results-container').style.display = 'none';
+            document.getElementById('modal-actions').style.display = 'none';
+            
+            document.getElementById('modal-progress-container').style.display = 'block';
+            document.getElementById('modal-progress-bar').style.width = '0%';
+            
+            document.getElementById('live-comments').innerHTML = '';
+            document.getElementById('live-view-placeholder').style.display = 'block';
+            document.getElementById('live-view-area').style.display = 'none';
+            document.getElementById('live-doc-frame').src = 'about:blank';
+            const initialMdFrame = document.getElementById('live-md-frame');
+            initialMdFrame.style.whiteSpace = 'pre-wrap';
+            initialMdFrame.textContent = '';
+
+            try {
+                const res = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || 'Failed to start analysis.');
+                }
+
+                let isPolling = true;
+                let currentFileProcessing = null;
+                let currentMdProcessing = null;
+                let currentJsonProcessing = null;
+                let mdPollInterval = null;
+
+                const pollStatus = async () => {
+                    if (!isPolling) return;
+                    try {
+                        const statusRes = await fetch('/api/state');
+                        const statusData = await statusRes.json();
+                        
+                        const msg = statusData.message || 'Processing...';
+                        document.getElementById('modal-status').textContent = msg;
+                        
+                        // Update live comments
+                        const commentsDiv = document.getElementById('live-comments');
+                        if (!commentsDiv.lastChild || commentsDiv.lastChild.textContent !== '> ' + msg) {
+                            const p = document.createElement('div');
+                            p.textContent = '> ' + msg;
+                            commentsDiv.appendChild(p);
+                            commentsDiv.scrollTop = commentsDiv.scrollHeight;
+                        }
+
+                        // Update Live View Panel
+                        if (statusData.current_file && statusData.current_file !== currentFileProcessing) {
+                            currentFileProcessing = statusData.current_file;
+                            currentMdProcessing = statusData.current_markdown;
+                            currentJsonProcessing = null;
+                            
+                            document.getElementById('live-view-placeholder').style.display = 'none';
+                            document.getElementById('live-view-area').style.display = 'block';
+                            
+                            const docFrame = document.getElementById('live-doc-frame');
+                            const mdFrame = document.getElementById('live-md-frame');
+                            const jsonFrame = document.getElementById('live-json-frame');
+                            docFrame.style.opacity = 0;
+                            docFrame.style.pointerEvents = 'none';
+                            docFrame.addEventListener('load', () => { 
+                                docFrame.style.opacity = 1; 
+                                docFrame.style.pointerEvents = 'auto';
+                            }, { once: true });
+                            docFrame.src = `/api/file?path=${encodeURIComponent(statusData.current_file)}`;
+                            mdFrame.textContent = '';
+                            mdFrame.style.opacity = 0;
+                            mdFrame.style.pointerEvents = 'none';
+                            if (jsonFrame) {
+                                jsonFrame.textContent = '';
+                                jsonFrame.style.opacity = 0;
+                                jsonFrame.style.pointerEvents = 'none';
+                            }
+
+                            if (mdPollInterval) { clearInterval(mdPollInterval); }
+                            if (currentMdProcessing) {
+                                mdPollInterval = setInterval(async () => {
+                                    try {
+                                        const res = await fetch(`/api/file?path=${encodeURIComponent(currentMdProcessing)}`);
+                                        if (res.ok) {
+                                            const text = await res.text();
+                                            if (text && text.trim().length > 0) {
+                                                mdFrame.textContent = text;
+                                                docFrame.style.opacity = 0;
+                                                docFrame.style.pointerEvents = 'none';
+                                                mdFrame.style.opacity = 1;
+                                                mdFrame.style.pointerEvents = 'auto';
+                                                clearInterval(mdPollInterval);
+                                            }
+                                        }
+                                    } catch (e) {}
+                                }, 1500);
+                            }
+                        }
+
+                        if (statusData.current_jsonpreview && statusData.current_jsonpreview !== currentJsonProcessing) {
+                            currentJsonProcessing = statusData.current_jsonpreview;
+                            try {
+                                const resJ = await fetch(`/api/file?path=${encodeURIComponent(currentJsonProcessing)}`);
+                                if (resJ.ok) {
+                                    const jsonText = await resJ.text();
+                                    if (jsonText && jsonText.trim().length > 0) {
+                                        const jsonFrame = document.getElementById('live-json-frame');
+                                        const mdFrame = document.getElementById('live-md-frame');
+                                        if (jsonFrame && mdFrame) {
+                                            try {
+                                                const parsed = JSON.parse(jsonText);
+                                                jsonFrame.textContent = JSON.stringify(parsed, null, 2);
+                                            } catch(e) {
+                                                jsonFrame.textContent = jsonText;
+                                            }
+                                            mdFrame.style.opacity = 0;
+                                            mdFrame.style.pointerEvents = 'none';
+                                            jsonFrame.style.opacity = 1;
+                                            jsonFrame.style.pointerEvents = 'auto';
+                                        }
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+
+                        if (statusData.stage === 'done') {
+                            isPolling = false;
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            document.getElementById('modal-title').textContent = 'Analysis Complete';
+                            document.getElementById('modal-progress-bar').style.width = '100%';
+                            document.getElementById('modal-spinner').style.display = 'none';
+                            
+                            // Ensure the preview screen is visible on completion
+                            document.getElementById('live-view-placeholder').style.display = 'none';
+                            document.getElementById('live-view-area').style.display = 'block';
+
+                            const deliverablesHTML = (statusData.files || []).map(f => {
+                                const baseName = f.split(/[/\\]/).pop();
+                                return `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; border: 1px solid #333; border-radius: 6px; margin-bottom: 0.5rem; background: #000;">
+                                        <span style="color: white; font-family: 'Inter', sans-serif; font-size: 0.85rem;">${baseName}</span>
+                                        <button onclick="openFile('${f.replace(/\\/g, '\\\\')}')" style="background: white; color: black; border: none; padding: 0.35rem 0.7rem; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.75rem; font-family: 'Inter', sans-serif;">Open</button>
+                                    </div>
+                                `;
+                            }).join('');
+                            
+                            /* document.getElementById('modal-actions').style.display = 'block'; */
+                            
+                            // Auto redirect if we're not on new workflow
+                            const urlParams = new URLSearchParams(window.location.search);
+                            
+                            const mdFrame = document.getElementById('live-md-frame');
+                            const outputFormat = document.querySelector('input[name="output_format"]:checked').value.toUpperCase();
+                            const docFrame = document.getElementById('live-doc-frame');
+                            const jsonFrameComplete = document.getElementById('live-json-frame');
+                            if (jsonFrameComplete) {
+                                jsonFrameComplete.style.opacity = 0;
+                                jsonFrameComplete.style.pointerEvents = 'none';
+                            }
+                            docFrame.style.opacity = 0;
+                            docFrame.style.pointerEvents = 'none';
+                            
+                            mdFrame.style.opacity = 1;
+                            mdFrame.style.pointerEvents = 'auto';
+                            mdFrame.style.whiteSpace = 'normal';
+                            mdFrame.innerHTML = `
+                                <div style="font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100%;">
+                                    <h2 style="color: white; margin-top: 0; font-size: 1.5rem; font-weight: 300;">Analysis Complete</h2>
+                                    <p style="color: #a1a1aa; margin-bottom: 1.25rem; font-size: 0.9rem;">The files were successfully analyzed. Final reports have been generated and saved.</p>
+                                    
+                                    <div style="margin-bottom: 1.25rem; flex-shrink: 0;">
+                                        <h3 style="color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; border-bottom: 1px solid #333; padding-bottom: 0.25rem;">Output Settings Applied</h3>
+                                        <ul style="color: #a1a1aa; list-style: none; padding: 0; font-size: 0.9rem;">
+                                            <li style="margin-bottom: 0.25rem;"><strong style="color: white;">Format:</strong> ${outputFormat}</li>
+                                            <li><strong style="color: white;">Note:</strong> ${document.getElementById('extra_description').value || 'None'}</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 1.5rem; flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                                        <h3 style="color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; border-bottom: 1px solid #333; padding-bottom: 0.25rem; flex-shrink: 0;">Generated Deliverables</h3>
+                                        <div style="overflow-y: auto; flex: 1; padding-right: 0.5rem;">
+                                            ${deliverablesHTML}
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 1rem; flex-shrink: 0; margin-top: auto;">
+                                        <button onclick="window.location.href='/history_page.html'" style="background: white; color: black; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">View in History</button>
+                                        <button onclick="closeModal()" style="background: transparent; color: white; border: 1px solid white; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">Close</button>
+                                    </div>
+                                </div>
+                            `;
+
+                        } else if (statusData.stage === 'error') {
+                            isPolling = false;
+                            if (mdPollInterval) clearInterval(mdPollInterval);
+                            document.getElementById('modal-title').textContent = 'Analysis Failed';
+                            document.getElementById('modal-spinner').style.display = 'none';
+                            document.getElementById('modal-progress-container').style.display = 'none';
+                            /* document.getElementById('modal-actions').style.display = 'block'; */
+                        } else {
+                            let percent = 5;
+                            if (statusData.stage === 'converting') {
+                                const progress = statusData.progress_total > 0 ? (statusData.progress_current / statusData.progress_total) : 0;
+                                percent = 5 + Math.round(progress * 25);
+                            } else if (statusData.stage === 'extracting') {
+                                const progress = statusData.progress_total > 0 ? (statusData.progress_current / statusData.progress_total) : 0;
+                                percent = 30 + Math.round(progress * 50);
+                            } else if (statusData.stage === 'rendering') {
+                                percent = 85;
+                            }
+                            document.getElementById('modal-progress-bar').style.width = percent + '%';
+                        }
+                    } catch (e) {
+                        console.warn("Poll error:", e);
+                    }
+                    if (isPolling) setTimeout(pollStatus, 1500);
+                };
+                setTimeout(pollStatus, 1500);
+
+            } catch (err) {
+                console.error("Analysis submission error:", err);
+                document.getElementById('modal-title').textContent = 'Error';
+                document.getElementById('modal-status').textContent = err.message;
+                document.getElementById('modal-spinner').style.display = 'none';
+                document.getElementById('modal-progress-container').style.display = 'none';
+                /* document.getElementById('modal-actions').style.display = 'block'; */
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (e) {
+                console.error(e);
+            }
+            window.location.href = '/login_page.html';
+        }
+
+        function openFile(filePath) {
+            window.open('/api/file?path=' + encodeURIComponent(filePath) + '&t=' + Date.now(), '_blank');
+        }
+
+        function closeModal() {
+            document.getElementById('processing-modal').classList.remove('active');
+            window.location.href = '/history_page.html';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check session and load credentials
+            fetch('/api/auth/session?t=' + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    if(!data.user_id) {
+                        window.location.href = '/login_page.html';
+                    } else {
+                        document.getElementById('userProfile').style.display = 'block';
+                        document.getElementById('profileName').innerText = data.username || 'User';
+                        document.getElementById('profileDevice').innerText = data.device_id ? `Device: ${data.device_id}` : 'Web Session';
+                        
+                        // Step 1 was removed
+                    }
+                }).catch(() => window.location.href = '/login_page.html');
+
+            renderSelectedFiles();
+
+            const fileInput = document.getElementById('report-file-input');
+            const dropzone = document.getElementById('upload-dropzone');
+
+            fileInput.addEventListener('change', async (event) => {
+                const files = Array.from(event.target.files);
+                if (files.length > 0) {
+                    await handleFileSelection(files);
+                }
+                fileInput.value = '';
+            });
+
+            dropzone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                dropzone.classList.add('active');
+            });
+
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('active');
+            });
+
+            dropzone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                dropzone.classList.remove('active');
+                handleFileSelection(event.dataTransfer.files);
+            });
+
+            fetch('/api/student-directory')
+                .then(r => r.json())
+                .then(data => {
+                    studentDirectory = data.students || [];
+                    const directoryDatalist = document.getElementById('student_directory_list');
+                    if (directoryDatalist) {
+                        directoryDatalist.innerHTML = '';
+                        studentDirectory.forEach(student => {
+                            const opt = document.createElement('option');
+                            opt.value = student.student_name || '';
+                            opt.textContent = student.student_id ? `ID: ${student.student_id}` : '';
+                            directoryDatalist.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(() => {});
+
+            studentNameInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim().toLowerCase();
+                
+                // 1. Check scanned students first
+                let match = commonStudents.find(s => String(s.name).trim().toLowerCase() === query);
+                if (match) {
+                    document.getElementById('student_id').value = match.id || '';
+                } else {
+                    // 2. Fallback to full directory
+                    const dirMatch = studentDirectory.find(student => {
+                        const name = String(student.student_name || '').trim().toLowerCase();
+                        const id = String(student.student_id || '').trim().toLowerCase();
+                        return query === name || query === id || query === '';
+                    });
+                    if (dirMatch && query) {
+                        document.getElementById('student_id').value = dirMatch.student_id || '';
+                    }
+                }
+                updateNextButtonState();
+            });
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentQueryParam = urlParams.get('student_query') || urlParams.get('student_name') || urlParams.get('student_id');
+            if (studentQueryParam) {
+                studentNameInput.value = studentQueryParam;
+            }
+
+            const clientId = Math.random().toString(36).substring(2);
+            function sendHeartbeat() {
+                fetch(`/api/heartbeat?client_id=${clientId}`).catch(() => {});
+            }
+            sendHeartbeat();
+            setInterval(sendHeartbeat, 2000);
+            window.addEventListener('beforeunload', () => {
+                if (navigator.sendBeacon) navigator.sendBeacon(`/api/heartbeat?client_id=${clientId}&closing=true`);
+            });
+
+            const urlStudentId = urlParams.get('student_id');
+            const urlStudentName = urlParams.get('student_name');
+            
+            if (urlStudentId || urlStudentName) {
+                document.getElementById('workflow_student').checked = true;
+                const classRadio = document.querySelector('input[name="workflow"][value="class"]');
+                if (classRadio) classRadio.checked = false;
+                
+                document.getElementById('student-info-section').style.display = 'block';
+                if (urlStudentId) document.getElementById('student_id').value = urlStudentId;
+                if (urlStudentName) document.getElementById('student_name').value = urlStudentName;
+            }
+
+            document.getElementById('student_id').addEventListener('input', (e) => {
+                const selectedId = e.target.value.trim().toLowerCase();
+                const match = commonStudents.find(s => String(s.id).trim().toLowerCase() === selectedId);
+                if (match) {
+                    document.getElementById('student_name').value = match.name;
+                }
+            });
+
+            fetch('/api/history')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.has_history && !localStorage.getItem('hasSeenIntro')) {
+                        showIntroModal();
+                    }
+                })
+                .catch(e => {});
+        });
+
+        document.querySelectorAll('.step-item').forEach((item, idx) => {
+            item.addEventListener('click', () => {
+                // Wizard removed
+            });
+        });
+
+        let currentIntroSlide = 0;
+        const totalIntroSlides = 3;
+
+        function showIntroModal() {
+            document.getElementById('intro-modal').classList.add('active');
+            currentIntroSlide = 0;
+            updateIntroSlide();
+        }
+
+        function closeIntroModal() {
+            document.getElementById('intro-modal').classList.remove('active');
+            localStorage.setItem('hasSeenIntro', 'true');
+        }
+
+        function navigateIntro(dir) {
+            currentIntroSlide += dir;
+            if (currentIntroSlide < 0) currentIntroSlide = 0;
+            if (currentIntroSlide >= totalIntroSlides) {
+                closeIntroModal();
+                return;
+            }
+            updateIntroSlide();
+        }
+
+        function jumpToIntroSlide(idx) {
+            currentIntroSlide = idx;
+            updateIntroSlide();
+        }
+
+        function updateIntroSlide() {
+            const slides = document.querySelectorAll('.intro-slide');
+            const dots = document.querySelectorAll('.intro-dot');
+            slides.forEach((slide, idx) => {
+                slide.style.display = idx === currentIntroSlide ? 'block' : 'none';
+            });
+            dots.forEach((dot, idx) => {
+                if (idx === currentIntroSlide) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+            document.getElementById('intro-prev-btn').style.display = currentIntroSlide > 0 ? 'inline-flex' : 'none';
+            document.getElementById('intro-next-btn').textContent = currentIntroSlide === totalIntroSlides - 1 ? 'Finish' : 'Next';
+        }
+    </script>
+</body>
+</html>
