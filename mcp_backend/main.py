@@ -349,4 +349,4 @@ if __name__ == "__main__":
         args.port,
     )
 
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+       uvicorn.run(app, host=args.host, port=args.port, log_level="info")
