@@ -79,15 +79,39 @@ class AgentRegistry:
 
     @classmethod
     def all_tools(cls) -> dict[str, dict]:
+        import inspect
         result = {}
         for module_path, _ in cls._SERVICES:
             mod = cls.get(module_path)
             if mod is None:
                 continue
-            # fastmcp-decorated functions carry _mcp_tool metadata
             for name, obj in vars(mod).items():
-                if callable(obj) and hasattr(obj, "_mcp_tool"):
-                    result[name] = obj._mcp_tool
+                if (
+                    callable(obj)
+                    and not name.startswith("_")
+                    and obj.__doc__
+                ):
+                    sig = inspect.signature(obj)
+                    props: dict = {}
+                    params: list = []
+                    for p_name, p in sig.parameters.items():
+                        props[p_name] = {"type": "string"}
+                        params.append({
+                            "name": p_name,
+                            "description": obj.__doc__.strip().split("\n")[0],
+                            "type": "string",
+                        })
+                    if sig.return_annotation is not inspect.Signature.empty:
+                        props["return"] = {"type": "string"}
+                    result[name] = {
+                        "name": name,
+                        "description": obj.__doc__.strip().split("\n")[0],
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": props,
+                            "required": [p["name"] for p in params],
+                        },
+                    }
         return result
 
     @classmethod
@@ -107,8 +131,8 @@ class AgentRegistry:
             mod = cls.get(module_path)
             if mod is None:
                 continue
-            if hasattr(mod, name) and callable(getattr(mod, name)):
-                fn = getattr(mod, name)
+            fn = getattr(mod, name, None)
+            if callable(fn):
                 return fn(**arguments)
         raise ValueError(f"Tool '{name}' not found.")
 
@@ -136,6 +160,9 @@ app = FastAPI(
 
 # ── in-memory SSE subscribers ─────────────────────────────────────────────────
 _subscribers: list[asyncio.Queue] = []
+
+from auth_routes import router as auth_routes
+app.include_router(auth_routes, prefix="/api/auth", tags=["auth"])
 _session_counter = 0
 
 
@@ -286,7 +313,6 @@ async def list_tools_rest():
         {"name": k, **v}
         for k, v in AgentRegistry.all_tools().items()
     ]}
-
 
 @app.get("/metrics")
 async def metrics():
