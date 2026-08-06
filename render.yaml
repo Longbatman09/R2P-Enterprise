@@ -4,13 +4,13 @@ services:
     runtime: docker
     repo: https://github.com/Longbatman09/R2P-Enterprise.git
     branch: main
-    dockerfilePath: ./mcp_backend/Dockerfile
+    dockerfilePath: mcp_backend/Dockerfile
     plan: starter
     region: oregon
     healthCheckPath: /health
     envVars:
       - key: PORT
-        value: 8100
+        value: "8100"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
