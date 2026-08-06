@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: r2p-mcp-backend
+    runtime: docker
+    repo: https://github.com/Longbatman09/R2P-Enterprise.git
+    branch: main
+    dockerfilePath: ./mcp_backend/Dockerfile
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8100
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_HOST
+        sync: false
+      - key: PINECONE_INDEX
+        value: textbook-rag
+      - key: LLMWHISPERER_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://r2p-frontend.vercel.app
+      - key: LOG_LEVEL
+        value: INFO
+    autoDeploy: true

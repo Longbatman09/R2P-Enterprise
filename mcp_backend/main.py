@@ -1,0 +1,319 @@
+"""R2P-Enterprise MCP Server — FastAPI + SSE
+Implements the Model Context Protocol (JSON-RPC 2.0 over HTTP/SSE).
+
+MCP Methods exposed
+-------------------
+tools/list              — list all available tools
+tools/call              — invoke a tool by name
+resources/list          — list static resources (schemas, configs)
+logging/setLevel        — control server log verbosity
+
+Client uses SSE endpoint to receive tool-call results;
+POST /mcp is used for all JSON-RPC calls.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import contextlib
+import importlib
+import json
+import logging
+import os
+import sys
+import time
+import uuid
+from pathlib import Path
+from typing import Any
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from sse_starlette.sse import EventSourceResponse
+import uvicorn
+
+# ── project bootstrap ────────────────────────────────────────────────────────
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# ── environment ──────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+log = logging.getLogger("mcp_server")
+
+# ── lazy agent imports ────────────────────────────────────────────────────────
+def _lazy(module_path: str, attr: str = None):
+    """Import a module (optionally fetch an attribute) and cache it."""
+    mod = importlib.import_module(module_path)
+    return getattr(mod, attr) if attr else mod
+
+
+class AgentRegistry:
+    """Lazy-loads all MCP-tool modules; each module must expose
+    a `tools` dict mapping tool-name → callable, and a `resources` list."""
+
+    # (module_path, attr_to_export)
+    _SERVICES = [
+        ("mcp_servers.rag_system", None),
+        ("mcp_servers.vision_extractor", None),
+        ("mcp_servers.plot_renderer", None),
+        ("mcp_servers.file_watcher", None),
+        ("agents.llmwhisperer_converter", "convert_file"),
+        ("agents.local_mem", None),
+    ]
+
+    _cache: dict[str, Any] = {}
+
+    @classmethod
+    def get(cls, module_path: str):
+        if module_path not in cls._cache:
+            try:
+                mod = importlib.import_module(module_path)
+                cls._cache[module_path] = mod
+            except Exception as exc:
+                log.warning("Failed to load %s: %s", module_path, exc)
+                cls._cache[module_path] = None
+        return cls._cache[module_path]
+
+    @classmethod
+    def all_tools(cls) -> dict[str, dict]:
+        result = {}
+        for module_path, _ in cls._SERVICES:
+            mod = cls.get(module_path)
+            if mod is None:
+                continue
+            # fastmcp-decorated functions carry _mcp_tool metadata
+            for name, obj in vars(mod).items():
+                if callable(obj) and hasattr(obj, "_mcp_tool"):
+                    result[name] = obj._mcp_tool
+        return result
+
+    @classmethod
+    def all_resources(cls) -> list[dict]:
+        resources = []
+        for module_path, _ in cls._SERVICES:
+            mod = cls.get(module_path)
+            if mod is None or not hasattr(mod, "resources"):
+                continue
+            for r in mod.resources:
+                resources.append(r)
+        return resources
+
+    @classmethod
+    def call_tool(cls, name: str, arguments: dict) -> Any:
+        for module_path, _ in cls._SERVICES:
+            mod = cls.get(module_path)
+            if mod is None:
+                continue
+            if hasattr(mod, name) and callable(getattr(mod, name)):
+                fn = getattr(mod, name)
+                return fn(**arguments)
+        raise ValueError(f"Tool '{name}' not found.")
+
+
+# ── compatibility shim: if fastmcp isn't installed, patch the modules ─────────
+try:
+    from fastmcp import FastMCP  # type: ignore
+    _FASTMCP_AVAILABLE = True
+except ImportError:
+    _FASTMCP_AVAILABLE = False
+    log.warning("fastmcp not installed — running with compatibility shim")
+
+    # We still need to import our modules; their mcp guard handles the absence
+    # of FastMCP (see vision_extractor._NullServer pattern).
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  FastAPI application
+# ════════════════════════════════════════════════════════════════════════════════
+app = FastAPI(
+    title="R2P-Enterprise MCP Server",
+    description="AI-powered academic report analysis via Model Context Protocol",
+    version="1.0.0",
+)
+
+# ── in-memory SSE subscribers ─────────────────────────────────────────────────
+_subscribers: list[asyncio.Queue] = []
+_session_counter = 0
+
+
+def _broadcast(event: dict):
+    for q in list(_subscribers):
+        q.put_nowait(event)
+
+
+async def _sse_stream():
+    """Yield events until client disconnects."""
+    global _session_counter
+    queue: asyncio.Queue = asyncio.Queue()
+    _subscribers.append(queue)
+    _session_counter += 1
+    session_id = _session_counter
+    log.info("SSE client connected [session=%d]", session_id)
+    try:
+        while True:
+            data = await queue.get()
+            yield {"event": "message", "data": json.dumps(data)}
+    finally:
+        with contextlib.suppress(ValueError):
+            _subscribers.remove(queue)
+        log.info("SSE client disconnected [session=%d]", session_id)
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  MCP — JSON-RPC 2.0 handler
+# ════════════════════════════════════════════════════════════════════════════════
+def _handle_mcp_request(body: dict, session_id: str) -> dict:
+    """Dispatch a single JSON-RPC 2.0 request and return a response dict."""
+    req_id = body.get("id")
+    method = body.get("method")
+    params = body.get("params", {})
+
+    log.debug("MCP method=%s id=%s", method, req_id)
+
+    # ---- initialize ──────────────────────────────────────────────────────────
+    if method == "initialize":
+        result = {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "tools": {"listChanged": False},
+                "resources": {"listChanged": False},
+                "logging": {},
+            },
+            "serverInfo": {
+                "name": "r2p-enterprise",
+                "version": "1.0.0",
+            },
+        }
+        return _jsonrpc_success(req_id, result)
+
+    # ---- tools/list ──────────────────────────────────────────────────────────
+    if method == "tools/list":
+        tools = []
+        for name, meta in AgentRegistry.all_tools().items():
+            tools.append({
+                "name": name,
+                "description": meta.get("description", ""),
+                "inputSchema": meta.get("inputSchema", {"type": "object"}),
+            })
+        return _jsonrpc_success(req_id, {"tools": tools})
+
+    # ---- tools/call ──────────────────────────────────────────────────────────
+    if method == "tools/call":
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+        try:
+            raw = AgentRegistry.call_tool(tool_name, arguments)
+            return _jsonrpc_success(req_id, {
+                "content": [{"type": "text", "text": json.dumps(raw)}],
+            })
+        except Exception as exc:
+            return _jsonrpc_error(req_id, -1, str(exc))
+
+    # ---- resources/list ──────────────────────────────────────────────────────
+    if method == "resources/list":
+        return _jsonrpc_success(req_id, {
+            "resources": AgentRegistry.all_resources(),
+        })
+
+    # ---- logging/setLevel ────────────────────────────────────────────────────
+    if method == "logging/setLevel":
+        level = getattr(logging, params.get("level", "INFO").upper(), logging.INFO)
+        logging.getLogger().setLevel(level)
+        return _jsonrpc_success(req_id, {})
+
+    return _jsonrpc_error(req_id, -32601, f"Method not found: {method}")
+
+
+def _jsonrpc_success(req_id, result):
+    resp = {"jsonrpc": "2.0", "result": result}
+    if req_id is not None:
+        resp["id"] = req_id
+    return resp
+
+
+def _jsonrpc_error(req_id, code, message):
+    resp = {"jsonrpc": "2.0", "error": {"code": code, "message": message}}
+    if req_id is not None:
+        resp["id"] = req_id
+    return resp
+
+
+@app.post("/mcp")
+async def mcp_endpoint(request: Request):
+    """JSON-RPC over HTTP — the primary MCP entry point."""
+    session_id = str(id(request))
+    body = await request.json()
+
+    # Handle batched requests
+    if isinstance(body, list):
+        responses = [_handle_mcp_request(r, session_id) for r in body]
+        return JSONResponse(responses)
+
+    response = _handle_mcp_request(body, session_id)
+    # Notify SSE subscribers in background
+    asyncio.get_event_loop().run_in_executor(
+        None, _broadcast, {"type": "mcp_response", "session": session_id, "data": response}
+    )
+    return JSONResponse(response)
+
+
+@app.get("/sse")
+async def sse_endpoint():
+    """Server-Sent Events stream for MCP push notifications."""
+    return EventSourceResponse(_sse_stream())
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  Health / readiness
+# ════════════════════════════════════════════════════════════════════════════════
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "server": "r2p-mcp",
+        "fastmcp_mode": _FASTMCP_AVAILABLE,
+        "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+
+@app.get("/tools")
+async def list_tools_rest():
+    """REST GET equivalent of tools/list — useful for dev/debug."""
+    return {"tools": [
+        {"name": k, **v}
+        for k, v in AgentRegistry.all_tools().items()
+    ]}
+
+
+@app.get("/metrics")
+async def metrics():
+    return {
+        "connected_sse_clients": len(_subscribers),
+        "registered_tools": len(AgentRegistry.all_tools()),
+        "registered_resources": len(AgentRegistry.all_resources()),
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  Entrypoint
+# ════════════════════════════════════════════════════════════════════════════════
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8100)))
+    parser.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0"))
+    args = parser.parse_args()
+
+    # Warm up agent modules (lazy import)
+    AgentRegistry.all_tools()
+    log.info(
+        "R2P MCP Server ready — %d tools, %d resources on http://%s:%d",
+        len(AgentRegistry.all_tools()),
+        len(AgentRegistry.all_resources()),
+        args.host,
+        args.port,
+    )
+
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
