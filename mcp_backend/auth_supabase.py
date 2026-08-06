@@ -33,7 +33,7 @@ from typing import Any
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from gotrue import SyncGoTrueClient   # from gotrue package
+
 from supabase import create_client, Client
 
 # ── bootstrap ────────────────────────────────────────────────────────────────
