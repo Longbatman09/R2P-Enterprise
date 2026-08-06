@@ -88,11 +88,14 @@ class AgentRegistry:
                 continue
             for name, obj in vars(mod).items():
                 if (
-                    callable(obj)
+                    inspect.isroutine(obj)
                     and not name.startswith("_")
                     and obj.__doc__
                 ):
-                    sig = inspect.signature(obj)
+                    try:
+                        sig = inspect.signature(obj)
+                    except ValueError:
+                        continue
                     props: dict = {}
                     params: list = []
                     for p_name, p in sig.parameters.items():
