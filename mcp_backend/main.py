@@ -300,10 +300,14 @@ async def metrics():
 # ════════════════════════════════════════════════════════════════════════════════
 #  Entrypoint
 # ════════════════════════════════════════════════════════════════════════════════
-if __name__ == "__main__":
-    import argparse
-    import uvicorn
 
+
+@app.get("/")
+async def root():
+    return {"message": "R2P MCP backend is running"}
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8100)))
     parser.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0"))
