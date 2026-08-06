@@ -274,11 +274,34 @@
             });
             const data = await res.json();
             if(res.ok) {
+                if (data.access_token) {
+                    localStorage.setItem("jwt", data.access_token);
+                }
                 document.getElementById('loadingOverlay').style.display = 'flex';
+                
+                const callTool = async (jwtStr, toolName, args) => {
+                    const resTool = await fetch("https://r2p-mcp-backend.onrender.com/mcp", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${jwtStr}`
+                        },
+                        body: JSON.stringify({
+                            jsonrpc: "2.0",
+                            id: Date.now(),
+                            method: "tools/call",
+                            params: { name: toolName, arguments: args || {} }
+                        })
+                    });
+                    const d = await resTool.json();
+                    if (d.error) throw new Error(d.error.message);
+                    return JSON.parse(d.result.content[0].text);
+                };
+
                 const pollStatus = async () => {
                     try {
-                        const statusRes = await fetch('/api/state');
-                        const statusData = await statusRes.json();
+                        const jwtStr = localStorage.getItem("jwt");
+                        const statusData = await callTool(jwtStr, 'get_state', {});
                         
                         if (statusData.stage === 'syncing') {
                             document.getElementById('loadingStatus').textContent = statusData.message || 'Retrieving your data securely from the cloud...';

@@ -299,9 +299,32 @@
      window.location.href = '/login_page.html';
     });
 
-   fetch('/api/history')
-    .then(r => r.json())
-    .then(data => {
+   const callTool = async (jwt, toolName, args) => {
+    const res = await fetch("https://r2p-mcp-backend.onrender.com/mcp", {
+     method: "POST",
+     headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${jwt}`
+     },
+     body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: Date.now(),
+      method: "tools/call",
+      params: { name: toolName, arguments: args || {} }
+     })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    // Parse the inner result content since tools return text
+    const content = data.result.content[0].text;
+    return JSON.parse(content);
+   };
+
+   const jwt = localStorage.getItem('jwt');
+   
+   callTool(jwt, 'list_student_reports')
+    .then(reports => {
+     const data = { items: reports, has_history: reports.length > 0 };
      if(data.has_history || (data.items && data.items.length > 0)) {
       hasHistory = true;
       const ragBtn = document.getElementById('ragBtn');

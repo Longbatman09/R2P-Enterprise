@@ -983,12 +983,14 @@
             }));
 
             document.getElementById('upload-status').textContent = 'Uploading selected files...';
+            const jwt = localStorage.getItem('jwt');
 
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ files: base64Files })
-            });
+            const res = await callTool(jwt, 'upload_files', { files: base64Files });
+
+            const data = res;
+            if (res.error) {
+                throw new Error(data.error || 'Failed to upload selected files.');
+            }
 
             const data = await res.json();
             if (!res.ok) {
@@ -1094,50 +1096,39 @@
             let currentFileScanning = null;
             scanPollInterval = setInterval(async () => {
                 try {
-                    const statusRes = await fetch('/api/state');
-                    if (statusRes.ok) {
-                        const statusData = await statusRes.json();
-                        if (statusData.stage === 'scanning') {
-                            const msg = statusData.message || 'Scanning...';
-                            status.textContent = msg;
-                            
-                            // Update live comments
-                            const commentsDiv = document.getElementById('live-comments');
-                            if (!commentsDiv.lastChild || commentsDiv.lastChild.textContent !== '> ' + msg) {
-                                const p = document.createElement('div');
-                                p.textContent = '> ' + msg;
-                                commentsDiv.appendChild(p);
-                                commentsDiv.scrollTop = commentsDiv.scrollHeight;
-                            }
-                            
-                            if (statusData.current_file && statusData.current_file !== currentFileScanning) {
-                                currentFileScanning = statusData.current_file;
-                                document.getElementById('live-view-placeholder').style.display = 'none';
-                                document.getElementById('live-view-area').style.display = 'block';
-                                const docFrame = document.getElementById('live-doc-frame');
-                                const mdFrame = document.getElementById('live-md-frame');
-                                const jsonFrame = document.getElementById('live-json-frame');
-                                docFrame.style.opacity = 0;
-                                docFrame.style.pointerEvents = 'none';
-                                docFrame.addEventListener('load', () => { 
-                                    docFrame.style.opacity = 1; 
-                                    docFrame.style.pointerEvents = 'auto';
-                                }, { once: true });
-                                docFrame.src = `/api/file?path=${encodeURIComponent(statusData.current_file)}`;
-                                if (mdFrame) {
-                                    mdFrame.style.opacity = 0;
-                                    mdFrame.style.pointerEvents = 'none';
-                                }
-                                if (jsonFrame) {
-                                    jsonFrame.style.opacity = 0;
-                                    jsonFrame.style.pointerEvents = 'none';
-                                }
-                            }
-                            
-                            if (statusData.progress_total > 0) {
-                                const percent = Math.round((statusData.progress_current / statusData.progress_total) * 100);
-                                document.getElementById('modal-progress-bar').style.width = percent + '%';
-                            }
+                    const jwt = localStorage.getItem('jwt');
+                    const statusData = await callTool(jwt, 'get_state', {});
+                    if (statusData.stage === 'scanning') {
+                        const msg = statusData.message || 'Scanning...';
+                        status.textContent = msg;
+                        
+                        const commentsDiv = document.getElementById('live-comments');
+                        if (!commentsDiv.lastChild || commentsDiv.lastChild.textContent !== '> ' + msg) {
+                            const p = document.createElement('div');
+                            p.textContent = '> ' + msg;
+                            commentsDiv.appendChild(p);
+                            commentsDiv.scrollTop = commentsDiv.scrollHeight;
+                        }
+                        
+                        if (statusData.current_file && statusData.current_file !== currentFileScanning) {
+                            currentFileScanning = statusData.current_file;
+                            document.getElementById('live-view-placeholder').style.display = 'none';
+                            document.getElementById('live-view-area').style.display = 'block';
+                            const docFrame = document.getElementById('live-doc-frame');
+                            const mdFrame = document.getElementById('live-md-frame');
+                            const jsonFrame = document.getElementById('live-json-frame');
+                            docFrame.style.opacity = 0;
+                            docFrame.style.pointerEvents = 'none';
+                            docFrame.addEventListener('load', () => { 
+                                docFrame.style.opacity = 1; 
+                                docFrame.style.pointerEvents = 'auto';
+                            }, { once: true });
+                            docFrame.src = `/api/file?path=${encodeURIComponent(statusData.current_file)}`;
+                        }
+                        
+                        if (statusData.progress_total > 0) {
+                            const percent = Math.round((statusData.progress_current / statusData.progress_total) * 100);
+                            document.getElementById('modal-progress-bar').style.width = percent + '%';
                         }
                     }
                 } catch (e) {
@@ -1146,18 +1137,9 @@
             }, 800);
 
             try {
-                const res = await fetch('/api/scan', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ input_files: selectedFiles }),
-                });
-                const scanData = await res.json();
+                const jwt = localStorage.getItem('jwt');
+                const scanData = await callTool(jwt, 'prescan_selected', { selected_files: selectedFiles });
 
-                if (!res.ok) {
-                    throw new Error(scanData.error || "Pre-scan failed.");
-                }
-
-                // Populate subjects checkboxes
                 const container = document.getElementById('data-fields-container');
                 const reportFields = scanData.common_fields && scanData.common_fields.length > 0 ? scanData.common_fields : [];
                 const reportFiles = scanData.selected_files && scanData.selected_files.length > 0 ? scanData.selected_files : selectedFiles;
@@ -1177,7 +1159,6 @@
                     </div>
                 `;
 
-                // Sync commonStudents list and update datalist
                 commonStudents = scanData.common_students || [];
                 const datalist = document.getElementById('student_directory_list');
                 if (datalist) {
@@ -1188,7 +1169,6 @@
                         opt.textContent = student.id ? `ID: ${student.id} (Detected in files)` : ' (Detected in files)';
                         datalist.appendChild(opt);
                     });
-                    // Append rest of directory
                     studentDirectory.forEach(student => {
                         const alreadyAdded = commonStudents.some(s => s.name === student.student_name);
                         if (!alreadyAdded) {
@@ -1204,7 +1184,6 @@
                 isScanned = true;
                 modal.classList.remove('active');
 
-                // Step 1 is now Extraction Summary
                 currentStep = 1;
                 statusDiv.innerHTML = `Scan complete. Detected ${scanData.common_fields ? scanData.common_fields.length : 0} fields. Click 'Next' to proceed.`;
             } catch (err) {
@@ -1226,19 +1205,9 @@
                 return;
             }
 
-
-
-            const payload = {
-                workflow: 'student_report',
-                input_files: selectedFiles,
-                student: {
-                    name: document.getElementById('profileName').innerText
-                },
-                output: {
-                    format: document.querySelector('input[name="output_format"]:checked').value,
-                },
-                extra_description: document.getElementById('extra_description').value,
-            };
+            const format = document.querySelector('input[name="output_format"]:checked').value;
+            const extraNotes = document.getElementById('extra_description').value;
+            const profileName = document.getElementById('profileName').innerText;
 
             document.getElementById('processing-modal').classList.add('active');
             document.getElementById('modal-spinner').style.display = 'block';
@@ -1259,16 +1228,13 @@
             initialMdFrame.textContent = '';
 
             try {
-                const res = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+                const jwt = localStorage.getItem('jwt');
+                const analysisRes = await callTool(jwt, 'analyze_reports', {
+                    selected_files: selectedFiles,
+                    output_format: format,
+                    extra_description: extraNotes,
+                    student_name: profileName
                 });
-
-                if (!res.ok) {
-                    const errData = await res.json();
-                    throw new Error(errData.error || 'Failed to start analysis.');
-                }
 
                 let isPolling = true;
                 let currentFileProcessing = null;
@@ -1279,13 +1245,12 @@
                 const pollStatus = async () => {
                     if (!isPolling) return;
                     try {
-                        const statusRes = await fetch('/api/state');
-                        const statusData = await statusRes.json();
+                        const jwt = localStorage.getItem('jwt');
+                        const statusData = await callTool(jwt, 'get_state', {});
                         
                         const msg = statusData.message || 'Processing...';
                         document.getElementById('modal-status').textContent = msg;
                         
-                        // Update live comments
                         const commentsDiv = document.getElementById('live-comments');
                         if (!commentsDiv.lastChild || commentsDiv.lastChild.textContent !== '> ' + msg) {
                             const p = document.createElement('div');
@@ -1294,7 +1259,6 @@
                             commentsDiv.scrollTop = commentsDiv.scrollHeight;
                         }
 
-                        // Update Live View Panel
                         if (statusData.current_file && statusData.current_file !== currentFileProcessing) {
                             currentFileProcessing = statusData.current_file;
                             currentMdProcessing = statusData.current_markdown;
@@ -1316,27 +1280,20 @@
                             mdFrame.textContent = '';
                             mdFrame.style.opacity = 0;
                             mdFrame.style.pointerEvents = 'none';
-                            if (jsonFrame) {
-                                jsonFrame.textContent = '';
-                                jsonFrame.style.opacity = 0;
-                                jsonFrame.style.pointerEvents = 'none';
-                            }
 
                             if (mdPollInterval) { clearInterval(mdPollInterval); }
                             if (currentMdProcessing) {
                                 mdPollInterval = setInterval(async () => {
                                     try {
-                                        const res = await fetch(`/api/file?path=${encodeURIComponent(currentMdProcessing)}`);
-                                        if (res.ok) {
-                                            const text = await res.text();
-                                            if (text && text.trim().length > 0) {
-                                                mdFrame.textContent = text;
-                                                docFrame.style.opacity = 0;
-                                                docFrame.style.pointerEvents = 'none';
-                                                mdFrame.style.opacity = 1;
-                                                mdFrame.style.pointerEvents = 'auto';
-                                                clearInterval(mdPollInterval);
-                                            }
+                                        const jwt = localStorage.getItem('jwt');
+                                        const res = await callTool(jwt, 'read_file', { path: currentMdProcessing });
+                                        if (res && res.text) {
+                                            mdFrame.textContent = res.text;
+                                            docFrame.style.opacity = 0;
+                                            docFrame.style.pointerEvents = 'none';
+                                            mdFrame.style.opacity = 1;
+                                            mdFrame.style.pointerEvents = 'auto';
+                                            clearInterval(mdPollInterval);
                                         }
                                     } catch (e) {}
                                 }, 1500);
@@ -1346,13 +1303,6 @@
                         if (statusData.current_jsonpreview && statusData.current_jsonpreview !== currentJsonProcessing) {
                             currentJsonProcessing = statusData.current_jsonpreview;
                             try {
-                                const resJ = await fetch(`/api/file?path=${encodeURIComponent(currentJsonProcessing)}`);
-                                if (resJ.ok) {
-                                    const jsonText = await resJ.text();
-                                    if (jsonText && jsonText.trim().length > 0) {
-                                        const jsonFrame = document.getElementById('live-json-frame');
-                                        const mdFrame = document.getElementById('live-md-frame');
-                                        if (jsonFrame && mdFrame) {
                                             try {
                                                 const parsed = JSON.parse(jsonText);
                                                 jsonFrame.textContent = JSON.stringify(parsed, null, 2);
@@ -1475,10 +1425,15 @@
 
         async function logout() {
             try {
-                await fetch('/api/auth/logout', { method: 'POST' });
+                const jwt = localStorage.getItem('jwt');
+                await fetch('https://r2p-mcp-backend.onrender.com/api/auth/logout', { 
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${jwt}` }
+                });
             } catch (e) {
                 console.error(e);
             }
+            localStorage.removeItem('jwt');
             window.location.href = '/login_page.html';
         }
 
@@ -1491,21 +1446,20 @@
             window.location.href = '/history_page.html';
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            // Check session and load credentials
-            fetch('/api/auth/session?t=' + Date.now())
-                .then(r => r.json())
-                .then(data => {
-                    if(!data.user_id) {
-                        window.location.href = '/login_page.html';
-                    } else {
-                        document.getElementById('userProfile').style.display = 'block';
-                        document.getElementById('profileName').innerText = data.username || 'User';
-                        document.getElementById('profileDevice').innerText = data.device_id ? `Device: ${data.device_id}` : 'Web Session';
-                        
-                        // Step 1 was removed
-                    }
-                }).catch(() => window.location.href = '/login_page.html');
+        window.addEventListener('DOMContentLoaded', async () => {
+            const jwt = localStorage.getItem('jwt');
+            if (!jwt) {
+                window.location.href = '/login_page.html';
+                return;
+            }
+            
+            // Assume logged in if JWT exists for now, to save network call
+            const nameEl = document.getElementById('profileName');
+            if (nameEl) nameEl.textContent = 'Authenticated User';
+            const deviceEl = document.getElementById('profileDevice');
+            if (deviceEl) deviceEl.textContent = 'Active Session';
+            const profileBlock = document.getElementById('userProfile');
+            if (profileBlock) profileBlock.style.display = 'block';
 
             renderSelectedFiles();
 
@@ -1535,10 +1489,10 @@
                 handleFileSelection(event.dataTransfer.files);
             });
 
-            fetch('/api/student-directory')
-                .then(r => r.json())
+            const jwtStr = localStorage.getItem('jwt');
+            callTool(jwtStr, 'search_student_directory', { student_name_or_id: '' })
                 .then(data => {
-                    studentDirectory = data.students || [];
+                    studentDirectory = data || [];
                     const directoryDatalist = document.getElementById('student_directory_list');
                     if (directoryDatalist) {
                         directoryDatalist.innerHTML = '';
@@ -1581,8 +1535,9 @@
 
             const clientId = Math.random().toString(36).substring(2);
             function sendHeartbeat() {
-                fetch(`/api/heartbeat?client_id=${clientId}`).catch(() => {});
+                // Heartbeat disabled for MCP frontend
             }
+            setInterval(sendHeartbeat, 60000);
             sendHeartbeat();
             setInterval(sendHeartbeat, 2000);
             window.addEventListener('beforeunload', () => {
@@ -1610,14 +1565,14 @@
                 }
             });
 
-            fetch('/api/history')
-                .then(r => r.json())
+            const jwtStr2 = localStorage.getItem('jwt');
+            callTool(jwtStr2, 'list_student_reports', {})
                 .then(data => {
-                    if (!data.has_history && !localStorage.getItem('hasSeenIntro')) {
-                        showIntroModal();
+                    if (data && data.length > 0) {
+                        hasHistory = true;
                     }
                 })
-                .catch(e => {});
+                .catch(e => console.error("History check failed", e));
         });
 
         document.querySelectorAll('.step-item').forEach((item, idx) => {

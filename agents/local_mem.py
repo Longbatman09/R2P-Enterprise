@@ -210,6 +210,9 @@ def load_student_directory() -> list[dict]:
 
 
 def search_student_directory(student_name_or_id: str) -> list[dict]:
+    """
+    Search student directory.
+    """
     query = student_name_or_id.strip().lower()
     if not query:
         return []
@@ -1091,6 +1094,9 @@ def render_final_output(student_id: str, provided_json_path: str | None = None) 
         return f"Error writing report: {e}"
 
 def list_student_reports() -> list[dict]:
+    """
+    List all generated student reports from history.
+    """
     uid = _uid()
     sup = get_supabase()
     

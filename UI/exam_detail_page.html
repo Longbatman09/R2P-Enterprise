@@ -394,10 +394,10 @@
             currentExamName = targetExamName;
 
             try {
-                const res = await fetch('/api/history');
-                const data = await res.json();
+                const jwt = localStorage.getItem('jwt');
+                const data = await callTool(jwt, 'list_student_reports', {});
 
-                if (!res.ok) throw new Error(data.error || 'Failed to retrieve list.');
+                if (!data) throw new Error('Failed to retrieve list.');
 
                 const assignment = (data.items || []).find(item => 
                     item.exam_names && item.exam_names.includes(targetExamName)
@@ -495,7 +495,7 @@
 
             const clientId = Math.random().toString(36).substring(2);
             function sendHeartbeat() {
-                fetch(`/api/heartbeat?client_id=${clientId}`).catch(() => {});
+                // MCP UI doesn't need heartbeat
             }
             sendHeartbeat();
             setInterval(sendHeartbeat, 2000);
@@ -545,39 +545,22 @@
                     });
                 }));
 
-                const uploadRes = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ files: base64Files })
-                });
-                const uploadData = await uploadRes.json();
-                if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
+                const jwt = localStorage.getItem('jwt');
+                const uploadRes = await callTool(jwt, 'upload_files', { files: base64Files });
+                if (uploadRes.error) throw new Error(uploadRes.error);
 
                 document.getElementById('add-modal-status').textContent = 'Submitting job...';
                 document.getElementById('add-modal-progress-bar').style.width = '20%';
 
-                const payload = {
-                    workflow: 'student_report',
-                    input_files: uploadData.files,
-                    target_exam_name: currentExamName,
-                    student: {
-                        query: addStudentName,
-                        name: addStudentName,
-                        id: addStudentId,
-                        class: '',
-                        section: ''
-                    },
-                    output: { format: 'both' },
-                    extra_description: ''
-                };
-
-                const analyzeRes = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                const analyzeRes = await callTool(jwt, 'analyze_reports', {
+                    selected_files: uploadRes.files,
+                    output_format: 'both',
+                    extra_description: 'Added from exam detail view',
+                    student_name: addStudentName,
+                    student_id: addStudentId
                 });
                 
-                if (!analyzeRes.ok) throw new Error('Analysis failed to start');
+                if (analyzeRes.error) throw new Error('Analysis failed to start');
 
                 
                 document.getElementById('add-data-modal').style.display = 'none';
@@ -609,8 +592,8 @@
 const pollStatus = async () => {
                     if (!isPolling) return;
                     try {
-                        const statusRes = await fetch('/api/state');
-                        const statusData = await statusRes.json();
+                        const jwt = localStorage.getItem('jwt');
+                        const statusData = await callTool(jwt, 'get_state', {});
                         
                         const msg = statusData.message || 'Processing...';
                         document.getElementById('modal-status').textContent = msg;
@@ -652,17 +635,15 @@ const pollStatus = async () => {
                             if (currentMdProcessing) {
                                 mdPollInterval = setInterval(async () => {
                                     try {
-                                        const res = await fetch(`/api/file?path=${encodeURIComponent(currentMdProcessing)}`);
-                                        if (res.ok) {
-                                            const text = await res.text();
-                                            if (text && text.trim().length > 0) {
-                                                mdFrame.textContent = text;
+                                        const jwt = localStorage.getItem('jwt');
+                                        const res = await callTool(jwt, 'read_file', { path: currentMdProcessing });
+                                        if (res && res.text) {
+                                                mdFrame.textContent = res.text;
                                                 docFrame.style.opacity = 0;
                                                 docFrame.style.pointerEvents = 'none';
                                                 mdFrame.style.opacity = 1;
                                                 mdFrame.style.pointerEvents = 'auto';
                                                 clearInterval(mdPollInterval);
-                                            }
                                         }
                                     } catch (e) {}
                                 }, 1500);
@@ -672,9 +653,10 @@ const pollStatus = async () => {
                         if (statusData.current_jsonpreview && statusData.current_jsonpreview !== currentJsonProcessing) {
                             currentJsonProcessing = statusData.current_jsonpreview;
                             try {
-                                const resJ = await fetch(`/api/file?path=${encodeURIComponent(currentJsonProcessing)}`);
-                                if (resJ.ok) {
-                                    const jsonText = await resJ.text();
+                                const jwt = localStorage.getItem('jwt');
+                                const resJ = await callTool(jwt, 'read_file', { path: currentJsonProcessing });
+                                if (resJ && resJ.text) {
+                                    const jsonText = resJ.text;
                                     if (jsonText && jsonText.trim().length > 0) {
                                         const jsonFrame = document.getElementById('live-json-frame');
                                         const mdFrame = document.getElementById('live-md-frame');
@@ -690,7 +672,6 @@ const pollStatus = async () => {
                                             jsonFrame.style.opacity = 1;
                                             jsonFrame.style.pointerEvents = 'auto';
                                         }
-                                    }
                                 }
                             } catch (e) {}
                         }

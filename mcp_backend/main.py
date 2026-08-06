@@ -60,6 +60,7 @@ class AgentRegistry:
         ("mcp_servers.vision_extractor", None),
         ("mcp_servers.plot_renderer", None),
         ("mcp_servers.file_watcher", None),
+        ("mcp_servers.ui_orchestrator", None),
         ("agents.llmwhisperer_converter", "convert_file"),
         ("agents.local_mem", None),
     ]
@@ -349,4 +350,4 @@ if __name__ == "__main__":
         args.port,
     )
 
-       uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")

@@ -217,6 +217,31 @@
     let textbooks   = [];
     let currentUsername = "";
 
+    const callTool = async (toolName, args) => {
+      const jwt = localStorage.getItem("jwt");
+      const res = await fetch(API + "/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${jwt}`
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: Date.now(),
+          method: "tools/call",
+          params: { name: toolName, arguments: args || {} }
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || "MCP Tool Error");
+      const textContent = data.result.content[0].text;
+      try {
+        return JSON.parse(textContent);
+      } catch(e) {
+        return textContent;
+      }
+    };
+
     async function fetchSession() {
       try {
         const r = await fetch(API + "/api/auth/session");
@@ -240,8 +265,7 @@
     // ── Textbook list ─────────────────────────────────────────────────────────
     async function fetchTextbooks() {
       try {
-        const r = await fetch(API + "/api/rag/textbooks");
-        const d = await r.json();
+        const d = await callTool("list_textbooks", {});
         textbooks = d.textbooks || [];
         renderTextbooks();
       } catch (e) {
@@ -296,12 +320,7 @@
     async function deleteTextbook(name) {
       if (!confirm(`Delete "${name}" from the knowledge base?`)) return;
       try {
-        const r = await fetch(API + "/api/rag", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({action: "delete", textbook_name: name}),
-        });
-        const d = await r.json();
+        const d = await callTool("delete_textbook", { textbook_name: name });
         if (d.status === "success") {
           if (selectedTB === name) { selectTextbook("All"); }
           await fetchTextbooks();
@@ -328,12 +347,12 @@
       addBotTyping();
 
       try {
-        const r = await fetch(API + "/api/rag", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({action: "query", textbook_name: selectedTB, question: q, top_k: 4, username: currentUsername}),
+        const d = await callTool("query_textbook", { 
+            textbook_name: selectedTB, 
+            question: q, 
+            top_k: 4, 
+            username: currentUsername 
         });
-        const d = await r.json();
         removeTyping();
         if (d.status === "ok") addBotAnswer(q, d.answer, d.sources || []);
         else addBotMessage(`Error: ${d.error || "unknown"}`);

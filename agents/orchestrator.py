@@ -146,6 +146,9 @@ def extract_for_prescan(filename: str):
 
 
 def prescan_input_files():
+    """
+    Prescan all input files.
+    """
     inputs = fw.list_input_files()
     files = inputs.get("files", [])
     if not files:
