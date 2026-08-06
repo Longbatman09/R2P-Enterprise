@@ -1,0 +1,33 @@
+services:
+  mcp:
+    build:
+      context: .
+      dockerfile: mcp_backend/Dockerfile
+    ports:
+      - "8100:8100"
+    env_file:
+      - mcp_backend/.env.local
+    volumes:
+      - ./mcp_backend:/app/mcp_backend  # live-reload (remove for prod)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Uncomment to run a local Postgres (use instead of cloud Supabase for full offline dev)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: r2p
+  #     POSTGRES_PASSWORD: r2p
+  #     POSTGRES_DB: r2p
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+  # volumes:
+  #   pgdata:

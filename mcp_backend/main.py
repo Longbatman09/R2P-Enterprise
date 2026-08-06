@@ -27,7 +27,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
@@ -273,8 +273,8 @@ def _jsonrpc_error(req_id, code, message):
 
 
 @app.post("/mcp")
-async def mcp_endpoint(request: Request):
-    """JSON-RPC over HTTP — the primary MCP entry point."""
+async def mcp_endpoint(request: Request, user: dict = Depends(get_current_user)):
+    """JSON-RPC over HTTP — the primary MCP entry point. Requires JWT auth."""
     session_id = str(id(request))
     body = await request.json()
 
@@ -292,8 +292,8 @@ async def mcp_endpoint(request: Request):
 
 
 @app.get("/sse")
-async def sse_endpoint():
-    """Server-Sent Events stream for MCP push notifications."""
+async def sse_endpoint(user: dict = Depends(get_current_user)):
+    """Server-Sent Events stream for MCP push notifications. Requires JWT auth."""
     return EventSourceResponse(_sse_stream())
 
 

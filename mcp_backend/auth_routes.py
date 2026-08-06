@@ -170,12 +170,13 @@ async def list_keys(user: dict = Depends(get_current_user)):
 
 @router.get("/keys/{service}", response_model=KeyResponse)
 async def get_key(service: str, user: dict = Depends(get_current_user)):
+    from auth_supabase import decrypt
     row = _get_api_key(user["id"], service)
     if not row:
         raise HTTPException(404, f"No key stored for service '{service}'")
     return KeyResponse(
         service=row.get("service", service),
-        key=row.get("key", ""),
+        key=decrypt(row.get("encrypted_key", "")),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
     )
