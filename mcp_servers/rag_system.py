@@ -39,7 +39,17 @@ from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger("rag_system")
 
-mcp = FastMCP("rag-system")
+mcp = FastMCP("rag-system", include_tags=False)
+_mount_called = False
+_original_run = None
+
+def _block_mount(*a, **kw):
+    global _mount_called
+    _mount_called = True
+def _run(*a, **kw):
+    pass
+_mcp_app = mcp
+del _original_run, _run
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT    = Path(__file__).resolve().parent.parent
