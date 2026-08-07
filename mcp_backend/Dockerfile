@@ -2,20 +2,20 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install Node.js (needed by pdf_extractor.js)
+# System deps: Node.js (pdf-parse), build tools for any wheels that need compiling
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs npm \
-    && npm install -g pdf-parse \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    build-essential \
+ && npm install -g pdf-parse \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY mcp_backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install the project itself (pulls deps from pyproject.toml)
+COPY pyproject.toml .
+RUN pip install --no-cache-dir .
 
-# Copy full project (agent code, mcp_servers, etc.)
+# Copy the rest of the source
 COPY . .
 
-# Expose port
 ENV PORT=8100
 EXPOSE 8100
 
