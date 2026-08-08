@@ -12,7 +12,7 @@ docker compose up --build
 
 ## Render — one-click Web Service
 
-1. Connect repo `https://github.com/<you>/R2P-Enterprise`
+1. Connect repo `https://github.com/Longbatman09/R2P-Enterprise`
 2. Runtime: **Docker**
 3. Dockerfile path: `mcp_backend/Dockerfile`
 4. Start command: *(leave blank — Docker CMD handles it)*
