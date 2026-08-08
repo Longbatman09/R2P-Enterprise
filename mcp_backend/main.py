@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
@@ -378,24 +378,23 @@ async def metrics():
 
 @app.get("/")
 async def root():
-    frontend_url = os.environ.get('FRONTEND_URL', 'Not configured (Set FRONTEND_URL env var)')
-    html_path = PROJECT_ROOT / "mcp_backend" / "frontend" / "index.html"
-    try:
-        with open(html_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
-    except FileNotFoundError:
-        html_content = "<html><body><h1>R2P MCP Backend</h1><p>Running (UI file not found)</p></body></html>"
-    
-    html_content = html_content.replace("{{FRONTEND_URL}}", frontend_url)
-    return HTMLResponse(content=html_content)
-
-@app.get("/styles.css")
-async def styles():
-    css_path = PROJECT_ROOT / "mcp_backend" / "frontend" / "styles.css"
-    if css_path.exists():
-        return FileResponse(css_path, media_type="text/css")
-    return HTMLResponse("/* CSS not found */", status_code=404)
-
+    """API status page. The frontend is a separate repo; this endpoint
+    only confirms the backend is up and points to the docs."""
+    return {
+        "name": "R2P-Enterprise MCP Backend",
+        "status": "running",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "api_doc": "https://github.com/Longbatman09/R2P-Enterprise/blob/main/mcp_backend/API_DOC.md",
+        "frontend_integration_guide": "https://github.com/Longbatman09/R2P-Enterprise/blob/main/Documentations/FRONTEND_INTEGRATION.md",
+        "endpoints": {
+            "health": "/health",
+            "login": "/api/auth/login",
+            "school": "/api/schools/me",
+            "mcp": "/mcp",
+            "sse": "/sse",
+        },
+    }
 
 
 if __name__ == "__main__":

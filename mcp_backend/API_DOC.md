@@ -1,9 +1,12 @@
 # R2P MCP Backend — API Reference for Frontend Devs
 
-**Base URL** (replace with your Render URL after deploy)
+**Base URL**
 ```
-https://r2p-mcp-backend.onrender.com
+https://r2p-enterprise.onrender.com
 ```
+
+> 🎨 Building the frontend? Read `Documentations/FRONTEND_INTEGRATION.md` — it's
+> the single source of truth for connecting the Vercel app to this backend.
 
 ---
 
@@ -277,20 +280,22 @@ POST /mcp  with  { "method": "tools/list" }
 
 ## 6. CORS
 
-The backend accepts requests from:
-```
-https://r2p-frontend.vercel.app
-```
-(Configurable via `CORS_ORIGINS` env var on Render — comma-separated list.)
+The backend accepts requests from the origins in the `CORS_ORIGINS` env var on
+Render (comma-separated). Tell the backend owner your frontend's exact URL
+(e.g. `https://r2p-frontend.vercel.app`) so it can be added.
 
 ---
 
 ## 7. Quick Start for Frontend
 
+Base URL: `https://r2p-enterprise.onrender.com`
+
 ```javascript
+const BASE = "https://r2p-enterprise.onrender.com";
+
 // 1. Login
 const login = async (email, password) => {
-  const res = await fetch("https://<render-url>/api/auth/login", {
+  const res = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password })
@@ -302,7 +307,7 @@ const login = async (email, password) => {
 
 // 2. List tools
 const listTools = async (jwt) => {
-  const res = await fetch("https://<render-url>/mcp", {
+  const res = await fetch(`${BASE}/mcp`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -315,7 +320,7 @@ const listTools = async (jwt) => {
 
 // 3. Call a tool
 const callTool = async (jwt, toolName, args) => {
-  const res = await fetch("https://<render-url>/mcp", {
+  const res = await fetch(`${BASE}/mcp`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -334,7 +339,7 @@ const callTool = async (jwt, toolName, args) => {
 // 4. SSE stream (for long-running tool results)
 const subscribeSSE = (jwt) => {
   const evtSource = new EventSource(
-    `https://<render-url>/sse`,
+    `${BASE}/sse`,
     { headers: { Authorization: `Bearer ${jwt}` } }
   );
   evtSource.onmessage = (e) => console.log("Result:", JSON.parse(e.data));
