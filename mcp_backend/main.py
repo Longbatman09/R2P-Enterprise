@@ -27,10 +27,13 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
+
+from auth_supabase import get_current_user
 
 # ── project bootstrap ────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -168,7 +171,45 @@ _subscribers: list[asyncio.Queue] = []
 from auth_routes import router as auth_routes
 from auth_supabase import get_current_user
 app.include_router(auth_routes, prefix="/api/auth", tags=["auth"])
+from school_routes import router as school_routes
+app.include_router(school_routes, prefix="/api/schools", tags=["schools"])
 _session_counter = 0
+
+# ── unified auth: Supabase JWT (frontend) OR school API key (SDK) ──────────────
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _school_key_hash(plain: str) -> str:
+    import hashlib
+    return hashlib.sha256(plain.encode()).hexdigest()
+
+
+async def get_api_principal(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+) -> dict:
+    """Resolve the caller as either a logged-in user (Supabase JWT) or a
+    school integration key (SDK, sk_...). Returns a dict with `kind`:
+
+      {"kind": "user",   "user": {...}}       – frontend / dashboard
+      {"kind": "school", "school_id": ..., "key": {...}} – SDK integration
+    """
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+    token = credentials.credentials
+
+    if token.startswith("sk_"):
+        from database import find_active_key
+        key_row = find_active_key(_school_key_hash(token))
+        if not key_row:
+            raise HTTPException(status_code=401, detail="Invalid or revoked API key")
+        return {
+            "kind": "school",
+            "school_id": key_row.get("school_id"),
+            "key": key_row,
+        }
+
+    user = await get_current_user(credentials)
+    return {"kind": "user", "user": user}
 
 
 def _broadcast(event: dict):
@@ -274,8 +315,9 @@ def _jsonrpc_error(req_id, code, message):
 
 
 @app.post("/mcp")
-async def mcp_endpoint(request: Request, user: dict = Depends(get_current_user)):
-    """JSON-RPC over HTTP — the primary MCP entry point. Requires JWT auth."""
+async def mcp_endpoint(request: Request, principal: dict = Depends(get_api_principal)):
+    """JSON-RPC over HTTP — the primary MCP entry point.
+    Accepts either a Supabase JWT (frontend) or a school integration key (SDK)."""
     session_id = str(id(request))
     body = await request.json()
 
@@ -293,8 +335,9 @@ async def mcp_endpoint(request: Request, user: dict = Depends(get_current_user))
 
 
 @app.get("/sse")
-async def sse_endpoint(user: dict = Depends(get_current_user)):
-    """Server-Sent Events stream for MCP push notifications. Requires JWT auth."""
+async def sse_endpoint(principal: dict = Depends(get_api_principal)):
+    """Server-Sent Events stream for MCP push notifications.
+    Accepts either a Supabase JWT (frontend) or a school integration key (SDK)."""
     return EventSourceResponse(_sse_stream())
 
 

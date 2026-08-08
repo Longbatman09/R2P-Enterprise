@@ -39,41 +39,15 @@ docker compose up --build
 
 ## Supabase — run this SQL once
 
-(Same SQL as before — kept here for convenience.)
+Open **Supabase → SQL Editor** and run the entire contents of
+`supabase/schema.sql` (idempotent — safe to re-run). It creates:
 
-```sql
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT, username TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, username)
-  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'username');
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
-
-CREATE TABLE IF NOT EXISTS public.user_api_keys (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  service TEXT NOT NULL,
-  encrypted_key TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, service)
-);
-ALTER TABLE public.user_api_keys ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own keys"
-  ON public.user_api_keys FOR ALL
-  USING (auth.uid() = user_id);
-```
+* `schools`, `students`, `invoices`, `report_logs` — tenant data
+* `school_api_keys` — SDK integration keys (hash + prefix stored)
+* `user_api_keys` — per-user third-party service keys (dashboard)
+* `profiles` (+ `school_id` link) with auto-create trigger
+* Row-Level-Security policies scoped to the logged-in user's school
+* `current_user_school_id()` helper used by the policies
 
 ## School integration — one-liner
 

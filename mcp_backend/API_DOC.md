@@ -43,10 +43,19 @@ Useful for debugging — tells you how many tools the backend has loaded.
 ## 2. MCP Tool Calling (the core)
 
 ### POST /mcp
-**Auth required** — header: `Authorization: Bearer <jwt>`
+**Auth required** — header: `Authorization: Bearer <jwt>` **OR** `Authorization: Bearer <sk_school_key>`
 **Content-Type:** `application/json`
 
 This is the single endpoint for all MCP operations (list tools, call a tool).
+The backend accepts **two auth schemes**:
+
+| Scheme | Token | Used by |
+|---|---|---|
+| Supabase JWT | `Authorization: Bearer <jwt>` | dashboard / frontend |
+| School API key | `Authorization: Bearer sk_...` | school SDK integrations |
+
+School keys are created via `POST /api/schools/{id}/keys` (dashboard) and
+can be revoked at any time with `DELETE /api/schools/{id}/keys/{key_id}`.
 
 #### A. List all available tools
 ```json
@@ -148,10 +157,13 @@ evtSource.onmessage = (e) => console.log("tool result:", JSON.parse(e.data));
 All below endpoints are under `/api/auth` prefix.
 
 ### POST /api/auth/signup
-No auth required. Creates a new account.
+**Disabled by default** — accounts are created manually by the platform
+admin in Supabase Auth (per the product's auth model). Set `SIGNUP_ENABLED=true`
+on the server to allow open signup (testing only).
 ```json
 { "email": "user@example.com", "password": "pass123", "username": "kabilan" }
 ```
+Expected when disabled: `403 Self-service signup is disabled.`
 
 ### POST /api/auth/login
 No auth required. Returns JWT.
@@ -189,6 +201,57 @@ Auth required. Save or update an API key.
 
 ### DELETE /api/auth/keys/{service}
 Auth required. Delete a stored API key.
+
+---
+
+## 4.5 School (Tenant) Management — `/api/schools`
+
+All endpoints below require a logged-in Supabase JWT.
+The user's school is resolved from their profile (`profiles.school_id`).
+
+### POST /api/schools/me
+Create a school and link it to the current user. Idempotent.
+```json
+{ "name": "Greenwood Public School", "contact_email": "office@greenwood.edu", "plan": "pro" }
+```
+Response: `{ "school": {...}, "created": true }`
+
+### GET /api/schools/me
+Current user's school + dashboard stats:
+```json
+{
+  "school": { "id": "...", "name": "...", "plan": "..." },
+  "stats": { "students": 0, "reports": 0, "api_keys": 0, "invoices": 0 }
+}
+```
+
+### GET /api/schools/{id}
+Fetch a school (must be the user's own school).
+
+### PATCH /api/schools/{id}
+Update name / contact_email / plan.
+
+### Students
+- `GET /api/schools/{id}/students` — list students
+- `POST /api/schools/{id}/students` — add `{ "name": "...", "grade": "10" }`
+- `DELETE /api/schools/{id}/students/{student_id}` — remove
+
+### SDK API keys (the integration keys schools use with the SDK)
+- `GET /api/schools/{id}/keys` — list keys (masked, no hashes)
+- `POST /api/schools/{id}/keys` — create key
+  ```json
+  { "name": "School ERP", "scopes": ["reports", "rag", "chat"] }
+  ```
+  Response returns the **plaintext key exactly once**:
+  ```json
+  { "key": "sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "key_prefix": "sk_xxx...", "name": "School ERP", "scopes": [...], "id": "..." }
+  ```
+- `PATCH /api/schools/{id}/keys/{key_id}` — rename / activate / deactivate
+- `DELETE /api/schools/{id}/keys/{key_id}` — revoke (key stops working immediately)
+
+### Invoices & reports (dashboard data)
+- `GET /api/schools/{id}/invoices` — invoice list
+- `GET /api/schools/{id}/reports` — last 50 report logs
 
 ---
 

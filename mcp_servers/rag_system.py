@@ -111,15 +111,26 @@ def _pc_get_host(index_name: str) -> str:
 
 
 
-def _pc_upsert(index_name: str, vectors: list[dict]) -> None:
-    """Upsert a batch of vectors (max 100 per call)."""
+def _namespace(owner: str) -> str:
+    """Pinecone namespace for a student/owner scope.
+
+    Every student (and the shared "" namespace) is fully isolated, so
+    RAG queries only ever return that student's own ingested material.
+    """
+    if not owner:
+        return ""
+    return f"student-{_normalize(owner)}"
+
+
+def _pc_upsert(index_name: str, vectors: list[dict], namespace: str = "") -> None:
+    """Upsert a batch of vectors (max 100 per call) into a namespace."""
     host = _pc_get_host(index_name)
     url = f"https://{host}/vectors/upsert"
-    r = requests.post(url, headers=_pc_headers(), json={"vectors": vectors, "namespace": ""}, timeout=60)
+    r = requests.post(url, headers=_pc_headers(), json={"vectors": vectors, "namespace": namespace}, timeout=60)
     r.raise_for_status()
 
 
-def _pc_query(index_name: str, vector: list[float], top_k: int = 4) -> list[dict]:
+def _pc_query(index_name: str, vector: list[float], top_k: int = 4, namespace: str = "") -> list[dict]:
     host = _pc_get_host(index_name)
     url = f"https://{host}/query"
     payload = {
@@ -127,6 +138,7 @@ def _pc_query(index_name: str, vector: list[float], top_k: int = 4) -> list[dict
         "topK":          top_k,
         "includeValues": False,
         "includeMetadata": True,
+        "namespace":     namespace,
     }
     r = requests.post(url, headers=_pc_headers(), json=payload, timeout=30)
     r.raise_for_status()
@@ -273,15 +285,19 @@ def _nim_chat(messages: list[dict], max_tokens: int = 600) -> str:
 
 @mcp.tool()
 def ingest_textbook(file_bytes_b64: str, textbook_name: str,
-                    file_name: str = "textbook.pdf") -> dict:
+                    file_name: str = "textbook.pdf",
+                    student_id: str = "") -> dict:
     """
     Upload a textbook PDF, extract text, chunk, embed via NVIDIA NIM,
-    and store vectors in Pinecone.
+    and store vectors in Pinecone under an isolated namespace.
 
     Parameters:
       file_bytes_b64  Base64-encoded PDF file content
       textbook_name   Human-readable textbook name (used as index slug)
       file_name       Original filename (for logging)
+      student_id      Optional student scope — vectors are stored in a
+                      per-student namespace so only that student's RAG
+                      queries can see them. Empty = shared school material.
     """
     _require_env("PINECONE_API_KEY")
     _require_env("NVIDIA_API_KEY")
@@ -293,6 +309,7 @@ def ingest_textbook(file_bytes_b64: str, textbook_name: str,
 
     tex_id   = textbook_name.strip()
     idx_name = _ensure_index(tex_id)
+    ns       = _namespace(student_id)
 
     # 1 — Extract text
     full_text = _extract_pdf(pdf_bytes)
@@ -326,40 +343,49 @@ def ingest_textbook(file_bytes_b64: str, textbook_name: str,
                 "id":       chunk["id"],
                 "values":   emb,
                 "metadata": {
-                    "textbook": chunk["textbook"],
-                    "page":     chunk["page"],
-                    "text":     chunk["text"][:4000],
+                    "textbook":  chunk["textbook"],
+                    "page":      chunk["page"],
+                    "text":      chunk["text"][:4000],
+                    "student_id": student_id or "",
                 },
             })
 
         try:
-            _pc_upsert(idx_name, vectors)
+            _pc_upsert(idx_name, vectors, namespace=ns)
             upserted += len(vectors)
         except Exception as exc:
             return {"status": "error",
                     "error": f"Pinecone upsert failed: {exc}",
                     "upserted_so_far": upserted}
 
-    # 4 — Local manifest
+    # 4 — Local manifest (student-scoped manifests live in students/,
+    #     so list_textbooks() — which globs the root — stays school-wide)
     manifest = {
         "textbook_name":  tex_id,
         "pinecone_index": idx_name,
+        "namespace":      ns,
         "n_pages":        1,
         "total_chars":    len(full_text),
         "n_chunks":       len(chunks),
         "upserted":       upserted,
         "embed_model":    EMBED_MODEL,
         "file_name":      file_name,
+        "student_id":     student_id,
         "created_at":     time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
-    (RAG_DATA_DIR / f"{idx_name}.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8"
-    )
+    if student_id:
+        students_dir = RAG_DATA_DIR / "students"
+        students_dir.mkdir(parents=True, exist_ok=True)
+        manifest_path = students_dir / f"{idx_name}-{_normalize(student_id)}.json"
+    else:
+        manifest_path = RAG_DATA_DIR / f"{idx_name}.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     return {
         "status":         "success",
         "textbook_name":  tex_id,
         "pinecone_index": idx_name,
+        "namespace":      ns,
         "n_pages":        1,
         "total_chars":    len(full_text),
         "n_chunks":       len(chunks),
@@ -400,6 +426,8 @@ def query_textbook(textbook_name: str, question: str, top_k: int = 4, username: 
     except Exception as exc:
         return {"status": "error", "error": f"NIM embed error: {exc}"}
 
+    ns = _namespace(username)
+
     try:
         if textbook_name.lower() == "all":
             all_tbs = list_textbooks().get("textbooks", [])
@@ -407,7 +435,7 @@ def query_textbook(textbook_name: str, question: str, top_k: int = 4, username: 
             for tb in all_tbs:
                 try:
                     tb_idx = tb["pinecone_index"]
-                    idx_matches = _pc_query(tb_idx, q_vec, top_k=top_k)
+                    idx_matches = _pc_query(tb_idx, q_vec, top_k=top_k, namespace=ns)
                     matches.extend(idx_matches)
                 except Exception as exc:
                     logger.error("Failed to query %s: %s", tb_idx, exc)
@@ -415,7 +443,7 @@ def query_textbook(textbook_name: str, question: str, top_k: int = 4, username: 
             # Sort by score and keep top_k
             matches = sorted(matches, key=lambda x: float(x.get("score", 0.0)), reverse=True)[:top_k]
         else:
-            matches = _pc_query(_idx_name(textbook_name), q_vec, top_k=top_k)
+            matches = _pc_query(_idx_name(textbook_name), q_vec, top_k=top_k, namespace=ns)
     except Exception as exc:
         return {"status": "error", "error": f"Pinecone query error: {exc}"}
 

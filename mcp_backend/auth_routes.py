@@ -105,7 +105,18 @@ async def _user_from_token(request: Request) -> dict:
 
 @router.post("/signup")
 async def signup(req: SignupRequest):
-    """Create a new user in Supabase Auth and log them in."""
+    """Create a new user in Supabase Auth and log them in.
+
+    Per the product's auth model there is NO public self-service signup —
+    accounts are created manually by the platform admin. Set
+    SIGNUP_ENABLED=true to allow open signup (e.g. for testing).
+    """
+    if os.environ.get("SIGNUP_ENABLED", "").lower() not in ("1", "true", "yes"):
+        raise HTTPException(
+            status_code=403,
+            detail=("Self-service signup is disabled. "
+                    "Contact the platform admin to create your account."),
+        )
     from auth_supabase import _sb_anon
     try:
         result = _sb_anon.auth.sign_up({

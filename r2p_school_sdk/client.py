@@ -7,10 +7,10 @@ Usage:
 
     client = R2PSchoolClient(
         api_url="https://<your-render-app>.onrender.com",
-        api_key="<student-or-school-api-key>",
+        api_key="sk-<school-key>",   # created in the dashboard
     )
 
-    # Upload a report PDF
+    # Upload a report PDF → run the full analysis pipeline
     result = client.upload_report(
         file_path="report.pdf",
         student_name="Aarav Sharma",
@@ -22,7 +22,8 @@ Usage:
 
 from __future__ import annotations
 
-import base64
+import time
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -31,7 +32,12 @@ from .utils import file_to_base64
 
 
 class R2PSchoolClient:
-    """Thin wrapper around the R2P-Enterprise MCP backend."""
+    """Thin wrapper around the R2P-Enterprise MCP backend.
+
+    Auth: pass the school's integration key (sk_...) created via the
+    dashboard. The backend also accepts dashboard JWTs, but the SDK
+    always speaks with the school key.
+    """
 
     def __init__(self, api_url: str, api_key: str, timeout: int = 120) -> None:
         self.api_url = api_url.rstrip("/")
@@ -55,6 +61,11 @@ class R2PSchoolClient:
             },
             timeout=self.timeout,
         )
+        if r.status_code == 401:
+            raise PermissionError(
+                "API key rejected (401). Check that the key is active "
+                "and was created for the same school."
+            )
         r.raise_for_status()
         body = r.json()
         if "error" in body:
@@ -74,7 +85,7 @@ class R2PSchoolClient:
         return body.get("result", {}).get("tools", [])
 
     # ------------------------------------------------------------------
-    # School-facing helpers
+    # Report analysis
     # ------------------------------------------------------------------
 
     def upload_report(
@@ -84,14 +95,72 @@ class R2PSchoolClient:
         student_id: str,
         output_format: str = "pptx",
         extra_description: str = "",
+        wait: bool = True,
+        timeout: int = 300,
     ) -> dict:
-        """Upload a PDF or image report and run the analysis pipeline."""
+        """Upload a PDF/image report and run the analysis pipeline.
+
+        Returns the *started* job state, or the final state if `wait=True`.
+        """
         b64 = file_to_base64(file_path)
-        return self._call_tool("analyze_reports", {
-            "selected_files": b64,
+        file_name = Path(file_path).name
+
+        upload = self._call_tool("upload_files", {
+            "files": [{"name": file_name, "data": b64}],
+        })
+        saved = (upload.get("files") or [])
+        if not saved:
+            raise RuntimeError(f"Upload failed: {upload}")
+
+        started = self._call_tool("analyze_reports", {
+            "selected_files": saved,
             "output_format": output_format,
             "extra_description": extra_description,
             "student_name": student_name,
+            "student_id": student_id,
+        })
+
+        if not wait:
+            return started
+        return self.wait_for_report(timeout=timeout)
+
+    def get_pipeline_state(self) -> dict:
+        """Current pipeline state (extracting → unifying → rendering → completed)."""
+        return self._call_tool("get_state", {})
+
+    def wait_for_report(self, timeout: int = 300, poll: float = 2.0) -> dict:
+        """Poll the pipeline until it completes (or fails)."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            state = self.get_pipeline_state()
+            stage = (state.get("stage") or state.get("status") or "").lower()
+            if stage in ("completed", "done", "success", "finished"):
+                return state
+            if stage in ("error", "failed"):
+                raise RuntimeError(f"Analysis failed: {state.get('message', state)}")
+            time.sleep(poll)
+        raise TimeoutError(f"Analysis did not finish within {timeout}s")
+
+    # ------------------------------------------------------------------
+    # Per-student RAG (textbook learning assistant)
+    # ------------------------------------------------------------------
+
+    def ingest_textbook(
+        self,
+        file_path: str,
+        textbook_name: str,
+        student_id: str = "",
+    ) -> dict:
+        """Index a textbook PDF into Pinecone.
+
+        Pass `student_id` to scope the material to that student only —
+        their RAG queries will then only search their own textbook(s).
+        """
+        b64 = file_to_base64(file_path)
+        return self._call_tool("ingest_textbook", {
+            "file_bytes_b64": b64,
+            "textbook_name": textbook_name,
+            "file_name": Path(file_path).name,
             "student_id": student_id,
         })
 
@@ -102,7 +171,7 @@ class R2PSchoolClient:
         top_k: int = 5,
         student_id: str = "",
     ) -> dict:
-        """RAG query scoped to the given textbook."""
+        """RAG query scoped to the given textbook (and student namespace)."""
         return self._call_tool("query_textbook", {
             "textbook_name": textbook_name,
             "question": question,
@@ -113,14 +182,8 @@ class R2PSchoolClient:
     def list_textbooks(self) -> dict:
         return self._call_tool("list_textbooks", {})
 
-    def ingest_textbook(
-        self,
-        file_path: str,
-        textbook_name: str,
-    ) -> dict:
-        b64 = file_to_base64(file_path)
-        return self._call_tool("ingest_textbook", {
-            "file_bytes_b64": b64,
-            "textbook_name": textbook_name,
-            "file_name": file_path.split("/")[-1],
-        })
+    def delete_textbook(self, textbook_name: str) -> dict:
+        return self._call_tool("delete_textbook", {"textbook_name": textbook_name})
+
+    def rag_health(self) -> dict:
+        return self._call_tool("health_check", {})
