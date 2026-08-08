@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
 
@@ -335,135 +335,24 @@ async def metrics():
 
 @app.get("/")
 async def root():
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>R2P MCP Backend Status</title>
-        <style>
-            body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background-color: #0f172a;
-                color: #f8fafc;
-                margin: 0;
-                padding: 0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-            }
-            .container {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 12px;
-                padding: 40px;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                max-width: 650px;
-                width: 90%;
-            }
-            h1 {
-                margin-top: 0;
-                background: linear-gradient(to right, #38bdf8, #818cf8);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                font-size: 2.2em;
-            }
-            h2 {
-                color: #e2e8f0;
-                border-bottom: 1px solid #334155;
-                padding-bottom: 8px;
-                margin-top: 30px;
-            }
-            p {
-                line-height: 1.6;
-                color: #94a3b8;
-            }
-            .card {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                padding: 16px;
-                margin-top: 16px;
-            }
-            code {
-                background-color: #1e293b;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-                color: #38bdf8;
-                font-size: 0.9em;
-            }
-            .code-block {
-                display: block;
-                padding: 12px;
-                margin: 10px 0;
-                color: #a7f3d0;
-                overflow-x: auto;
-            }
-            ul {
-                line-height: 1.6;
-                color: #94a3b8;
-                padding-left: 20px;
-            }
-            li {
-                margin-bottom: 8px;
-            }
-            .badge {
-                display: inline-flex;
-                align-items: center;
-                padding: 4px 12px;
-                background-color: rgba(52, 211, 153, 0.1);
-                color: #34d399;
-                border: 1px solid rgba(52, 211, 153, 0.2);
-                border-radius: 9999px;
-                font-size: 0.875rem;
-                font-weight: 600;
-                margin-bottom: 24px;
-            }
-            .badge::before {
-                content: '';
-                display: inline-block;
-                width: 8px;
-                height: 8px;
-                background-color: #34d399;
-                border-radius: 50%;
-                margin-right: 8px;
-                box-shadow: 0 0 8px #34d399;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="badge">System Online</div>
-            <h1>R2P MCP Server</h1>
-            <p>The Model Context Protocol (MCP) backend is running successfully. This server provides AI-powered academic report analysis and tool integrations.</p>
-            
-            <h2>Environment Configuration</h2>
-            <p>To fully utilize the authentication and secure API key storage features, ensure the following environment variables are properly set in your deployment:</p>
-            
-            <div class="card">
-                <ul>
-                    <li><code class="code-block">SUPABASE_URL</code> Your Supabase project URL (e.g., https://xyz.supabase.co)</li>
-                    <li><code class="code-block">SUPABASE_ANON_KEY</code> The anonymous public key for client requests</li>
-                    <li><code class="code-block">SUPABASE_SERVICE_ROLE_KEY</code> The admin key for bypassing RLS during user operations</li>
-                    <li><code class="code-block">AES_KEY</code> A 32-byte hex or base64 encoded string used to encrypt third-party API keys at rest. If not set, keys will be stored in base64.</li>
-                </ul>
-            </div>
-            
-            <h2>Core Endpoints</h2>
-            <ul>
-                <li><code>POST /mcp</code> — Primary JSON-RPC endpoint for tool execution</li>
-                <li><code>GET /sse</code> — Server-Sent Events stream for asynchronous results</li>
-                <li><code>GET /tools</code> — List all registered MCP tools</li>
-                <li><code>GET /health</code> — Basic health check and status</li>
-            </ul>
-        </div>
-    </body>
-    </html>
-    """
+    frontend_url = os.environ.get('FRONTEND_URL', 'Not configured (Set FRONTEND_URL env var)')
+    html_path = PROJECT_ROOT / "mcp_backend" / "frontend" / "index.html"
+    try:
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+    except FileNotFoundError:
+        html_content = "<html><body><h1>R2P MCP Backend</h1><p>Running (UI file not found)</p></body></html>"
+    
+    html_content = html_content.replace("{{FRONTEND_URL}}", frontend_url)
     return HTMLResponse(content=html_content)
+
+@app.get("/styles.css")
+async def styles():
+    css_path = PROJECT_ROOT / "mcp_backend" / "frontend" / "styles.css"
+    if css_path.exists():
+        return FileResponse(css_path, media_type="text/css")
+    return HTMLResponse("/* CSS not found */", status_code=404)
+
 
 
 if __name__ == "__main__":

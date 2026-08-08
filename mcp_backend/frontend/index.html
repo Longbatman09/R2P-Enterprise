@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R2P MCP Backend Status</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="badge">System Online</div>
+        <h1>R2P MCP Server</h1>
+        <p>The Model Context Protocol (MCP) backend is running successfully. This server provides AI-powered academic report analysis and tool integrations.</p>
+        
+        <h2>Environment Configuration</h2>
+        <p>To fully utilize the authentication and secure API key storage features, ensure the following environment variables are properly set in your deployment:</p>
+        
+        <div class="card">
+            <ul>
+                <li><code class="code-block">SUPABASE_URL</code> Your Supabase project URL (e.g., https://xyz.supabase.co)</li>
+                <li><code class="code-block">SUPABASE_ANON_KEY</code> The anonymous public key for client requests</li>
+                <li><code class="code-block">SUPABASE_SERVICE_ROLE_KEY</code> The admin key for bypassing RLS during user operations</li>
+                <li><code class="code-block">AES_KEY</code> A 32-byte hex or base64 encoded string used to encrypt third-party API keys at rest. If not set, keys will be stored in base64.</li>
+            </ul>
+        </div>
+        
+        <h2>Core Endpoints</h2>
+        <ul>
+            <li><code>POST /mcp</code> — Primary JSON-RPC endpoint for tool execution</li>
+            <li><code>GET /sse</code> — Server-Sent Events stream for asynchronous results</li>
+            <li><code>GET /tools</code> — List all registered MCP tools</li>
+            <li><code>GET /health</code> — Basic health check and status</li>
+        </ul>
+        
+        <h2>Documentation & Hosted UI</h2>
+        <ul>
+            <li><a href="/docs" style="color: #38bdf8; text-decoration: none;">Interactive API Docs (Swagger UI)</a> — Test and explore the API endpoints directly in your browser.</li>
+            <li><a href="/redoc" style="color: #38bdf8; text-decoration: none;">API Reference (ReDoc)</a> — Detailed specifications for all endpoints.</li>
+            <li><strong style="color: #e2e8f0;">Hosted Application UI:</strong> The main frontend application that connects to this backend is available at:<br>
+            <code class="code-block" style="margin-top: 8px; display: inline-block;">{{FRONTEND_URL}}</code>
+            </li>
+        </ul>
+    </div>
+</body>
+</html>
