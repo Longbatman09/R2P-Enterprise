@@ -165,6 +165,30 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# ── CORS ─────────────────────────────────────────────────────────────────────
+# The web frontend (Vercel) must be allowed to call this API from the browser.
+# Origins come from the CORS_ORIGINS env var (comma-separated).
+from fastapi.middleware.cors import CORSMiddleware
+
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "").split(",")
+    if o.strip()
+]
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    log.info("CORS enabled for origins: %s", _cors_origins)
+else:
+    log.warning(
+        "CORS_ORIGINS not set — cross-origin browser requests will be blocked."
+    )
+
 # ── in-memory SSE subscribers ─────────────────────────────────────────────────
 _subscribers: list[asyncio.Queue] = []
 
@@ -185,6 +209,7 @@ def _school_key_hash(plain: str) -> str:
 
 
 async def get_api_principal(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> dict:
     """Resolve the caller as either a logged-in user (Supabase JWT) or a
@@ -192,10 +217,15 @@ async def get_api_principal(
 
       {"kind": "user",   "user": {...}}       – frontend / dashboard
       {"kind": "school", "school_id": ..., "key": {...}} – SDK integration
+
+    The token is read from the Authorization header, or from ?token= for
+    clients that cannot set headers (e.g. browser EventSource).
     """
-    if credentials is None:
+    token = credentials.credentials if credentials else None
+    if not token:
+        token = request.query_params.get("token")
+    if not token:
         raise HTTPException(status_code=401, detail="Missing bearer token")
-    token = credentials.credentials
 
     if token.startswith("sk_"):
         from database import find_active_key

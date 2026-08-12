@@ -96,17 +96,41 @@ def get_state() -> dict:
     """
     return orch.get_state()
 
+# Directories inside the workspace that generated outputs may live in.
+# The read_file tool refuses anything outside these (prevents reading secrets
+# such as .env via a crafted path).
+_ALLOWED_OUTPUT_ROOTS = (
+    "input",
+    "Output",
+    "output",
+    "local_mem",
+    "rag_data",
+    "Archived_Files",
+    "students",
+)
+
+
 def read_file(path: str) -> dict:
     """
-    Read file contents and return as base64.
+    Read file contents and return as base64 (restricted to workspace outputs).
     """
     try:
         import base64
-        with open(path, "rb") as f:
+        project_root = Path(orch.project_root).resolve()
+        target = Path(path).expanduser().resolve()
+        allowed = any(
+            target.is_relative_to((project_root / root).resolve())
+            for root in _ALLOWED_OUTPUT_ROOTS
+        )
+        if not allowed:
+            return {
+                "error": "Access denied: path must be inside the workspace output folders."
+            }
+        with open(target, "rb") as f:
             data = f.read()
-            ext = os.path.splitext(path)[1].lower()
+            ext = os.path.splitext(str(target))[1].lower()
             if ext in [".html", ".md", ".json"]:
-                return {"text": data.decode("utf-8")}
+                return {"text": data.decode("utf-8", errors="replace")}
             return {"base64": base64.b64encode(data).decode("utf-8")}
     except Exception as e:
         return {"error": str(e)}

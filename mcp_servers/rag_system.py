@@ -35,21 +35,26 @@ from typing import Any
 
 import requests
 
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP as _FastMCP
+except Exception:
+    _FastMCP = None  # optional library — not required for the JSON-RPC gateway
 
 logger = logging.getLogger("rag_system")
 
-mcp = FastMCP("rag-system", include_tags=False)
-_mount_called = False
-_original_run = None
+mcp = _FastMCP("rag-system", include_tags=False) if _FastMCP else None
 
-def _block_mount(*a, **kw):
-    global _mount_called
-    _mount_called = True
-def _run(*a, **kw):
-    pass
-_mcp_app = mcp
-del _original_run, _run
+
+def _tool(fn):
+    """Register with FastMCP when available, but always keep the decorated
+    function a plain callable so the JSON-RPC AgentRegistry (/mcp) can
+    auto-discover it. Without this, RAG tools are unreachable from the API."""
+    if mcp is not None:
+        try:
+            mcp.tool()(fn)
+        except Exception:
+            pass
+    return fn
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT    = Path(__file__).resolve().parent.parent
@@ -283,7 +288,7 @@ def _nim_chat(messages: list[dict], max_tokens: int = 600) -> str:
 #  MCP Tools
 # ═════════════════════════════════════════════════════════════════════════════
 
-@mcp.tool()
+@_tool
 def ingest_textbook(file_bytes_b64: str, textbook_name: str,
                     file_name: str = "textbook.pdf",
                     student_id: str = "") -> dict:
@@ -393,7 +398,7 @@ def ingest_textbook(file_bytes_b64: str, textbook_name: str,
     }
 
 
-@mcp.tool()
+@_tool
 def query_textbook(textbook_name: str, question: str, top_k: int = 4, username: str = None) -> dict:
     """
     RAG query: embed question → Pinecone search → NIM answer with citations.
@@ -496,7 +501,7 @@ def query_textbook(textbook_name: str, question: str, top_k: int = 4, username: 
     return {"status": "ok", "answer": answer, "sources": sources}
 
 
-@mcp.tool()
+@_tool
 def list_textbooks() -> dict:
     """List all ingested textbooks from local manifests."""
     manifests: list[dict] = []
@@ -510,7 +515,7 @@ def list_textbooks() -> dict:
     return {"textbooks": manifests, "count": len(manifests)}
 
 
-@mcp.tool()
+@_tool
 def delete_textbook(textbook_name: str) -> dict:
     """Delete a textbook index from Pinecone and remove the local manifest."""
     name = _idx_name(textbook_name.strip())
@@ -524,7 +529,7 @@ def delete_textbook(textbook_name: str) -> dict:
     return {"status": "success", "deleted_index": name}
 
 
-@mcp.tool()
+@_tool
 def health_check() -> dict:
     """Probe Pinecone + NVIDIA NIM connectivity."""
     checks: dict[str, Any] = {}
@@ -555,4 +560,7 @@ def health_check() -> dict:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    mcp.run()
+    if mcp is not None:
+        mcp.run()
+    else:
+        raise SystemExit("FastMCP not available; use the JSON-RPC /mcp gateway instead.")
