@@ -167,27 +167,36 @@ app = FastAPI(
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 # The web frontend (Vercel) must be allowed to call this API from the browser.
-# Origins come from the CORS_ORIGINS env var (comma-separated).
+# Origins come from the CORS_ORIGINS env var (comma-separated). If unset,
+# fall back to the project's known frontend domains so the deployed web app
+# keeps working even before env vars are configured on the host.
 from fastapi.middleware.cors import CORSMiddleware
+
+DEFAULT_CORS_ORIGINS = [
+    "https://r2p-enterprise.vercel.app",
+    "https://r2p-frontend.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://localhost:8899",
+]
 
 _cors_origins = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "").split(",")
     if o.strip()
-]
-if _cors_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=_cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    log.info("CORS enabled for origins: %s", _cors_origins)
-else:
-    log.warning(
-        "CORS_ORIGINS not set — cross-origin browser requests will be blocked."
-    )
+] or DEFAULT_CORS_ORIGINS
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+log.info(
+    "CORS enabled for origins: %s", _cors_origins
+)
 
 # ── in-memory SSE subscribers ─────────────────────────────────────────────────
 _subscribers: list[asyncio.Queue] = []
