@@ -87,12 +87,16 @@ CREATE TABLE IF NOT EXISTS public.report_logs (
 ALTER TABLE public.report_logs ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
--- profiles — one row per auth user.
--- NOTE: profiles may already exist from earlier migrations, so we
--- CREATE IF NOT EXISTS (new installs) AND ALTER TABLE ADD COLUMN
--- IF NOT EXISTS (existing installs) to guarantee school_id exists.
+-- profiles — one row per auth user (id = auth.users.id).
+-- WARNING: the legacy R2P app created profiles with a DIFFERENT
+-- shape (uid, full_name, student_id, ...). That structure is
+-- incompatible with the new enterprise backend, so we DROP and
+-- recreate it with the canonical shape. Idempotent: safe to
+-- re-run.
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.profiles (
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
+CREATE TABLE public.profiles (
   id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email      TEXT,
   username   TEXT,
@@ -100,9 +104,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS school_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 

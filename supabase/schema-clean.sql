@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS public.report_logs (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE public.report_logs ENABLE ROW LEVEL SECURITY;
-CREATE TABLE IF NOT EXISTS public.profiles (
+DROP TABLE IF EXISTS public.profiles CASCADE;
+CREATE TABLE public.profiles (
   id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email      TEXT,
   username   TEXT,
@@ -59,8 +60,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS school_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 INSERT INTO public.profiles (id, email)
 SELECT id, email FROM auth.users
