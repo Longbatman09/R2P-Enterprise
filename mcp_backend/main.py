@@ -69,6 +69,7 @@ class AgentRegistry:
     ]
 
     _cache: dict[str, Any] = {}
+    _load_errors: dict[str, str] = {}
 
     @classmethod
     def get(cls, module_path: str):
@@ -78,6 +79,7 @@ class AgentRegistry:
                 cls._cache[module_path] = mod
             except Exception as exc:
                 log.warning("Failed to load %s: %s", module_path, exc)
+                cls._load_errors[module_path] = f"{type(exc).__name__}: {exc}"
                 cls._cache[module_path] = None
         return cls._cache[module_path]
 
@@ -407,7 +409,21 @@ async def metrics():
         "connected_sse_clients": len(_subscribers),
         "registered_tools": len(AgentRegistry.all_tools()),
         "registered_resources": len(AgentRegistry.all_resources()),
+        "module_load_errors": AgentRegistry._load_errors,
     }
+
+
+# ── surface real errors (instead of a generic 500) while the project is in
+#    active development — makes frontend-side debugging actionable ───────────
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    log.error(
+        "Unhandled error on %s %s: %s", request.method, request.url.path, exc
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"{type(exc).__name__}: {exc}"},
+    )
 
 
 # ════════════════════════════════════════════════════════════════════════════════

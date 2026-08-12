@@ -35,18 +35,25 @@ from typing import Any
 
 import requests
 
-try:
-    from mcp.server.fastmcp import FastMCP as _FastMCP
-except Exception:
-    _FastMCP = None  # optional library — not required for the JSON-RPC gateway
-
 logger = logging.getLogger("rag_system")
 
-mcp = _FastMCP("rag-system", include_tags=False) if _FastMCP else None
+# FastMCP is optional — it is only needed to run this module standalone.
+# Every integration point is guarded so the JSON-RPC gateway (/mcp) can
+# ALWAYS import this module and auto-discover the plain RAG functions below,
+# even when fastmcp/mcp is missing or misbehaving on the host.
+try:
+    from mcp.server.fastmcp import FastMCP as _FastMCP
+    mcp = _FastMCP("rag-system", include_tags=False)
+except Exception as exc:
+    logger.warning(
+        "FastMCP unavailable (%s) — RAG tools exposed via JSON-RPC only", exc
+    )
+    _FastMCP = None
+    mcp = None
 
 
 def _tool(fn):
-    """Register with FastMCP when available, but always keep the decorated
+    """Register with FastMCP when it works, but ALWAYS keep the decorated
     function a plain callable so the JSON-RPC AgentRegistry (/mcp) can
     auto-discover it. Without this, RAG tools are unreachable from the API."""
     if mcp is not None:
