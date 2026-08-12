@@ -106,6 +106,12 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFA
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Backfill profiles for users that existed before this schema/trigger
+-- was installed (e.g. accounts created manually in the Supabase dashboard).
+INSERT INTO public.profiles (id, email)
+SELECT id, email FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
 -- Auto-create a profile when a new auth user is added manually
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$

@@ -203,7 +203,13 @@ def get_school_for_user(user_id: str) -> dict | None:
 
 
 def link_user_to_school(user_id: str, school_id: str) -> None:
-    _t("profiles").update({"school_id": school_id}).eq("id", user_id).execute()
+    """Link a user to a school. Uses UPSERT so accounts created in the
+    Supabase dashboard *before* the profiles trigger existed still get a
+    profile row instead of silently failing to link."""
+    _t("profiles").upsert(
+        {"id": user_id, "school_id": school_id},
+        on_conflict="id",
+    ).execute()
 
 
 def unlink_user_from_school(user_id: str) -> None:
