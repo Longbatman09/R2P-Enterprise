@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import logging
 import os
+import time
+from collections import defaultdict
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -101,6 +103,31 @@ async def _user_from_token(request: Request) -> dict:
     )
 
 
+# ── login rate limiting (brute-force protection) ────────────────────────────
+# Simple in-memory sliding window per client IP. Fine for Render's
+# single-instance deployment; replace with a Redis-backed limiter if the
+# app ever scales horizontally.
+_LOGIN_MAX_ATTEMPTS = 10       # attempts allowed
+_LOGIN_WINDOW_SECONDS = 900    # per 15 minutes
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_login_rate(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    recent = [
+        ts for ts in _login_attempts[client_ip]
+        if now - ts < _LOGIN_WINDOW_SECONDS
+    ]
+    _login_attempts[client_ip] = recent
+    if len(recent) >= _LOGIN_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Please try again later.",
+        )
+    recent.append(now)
+
+
 # ── signup / login ────────────────────────────────────────────────────────────
 
 @router.post("/signup")
@@ -135,8 +162,9 @@ async def signup(req: SignupRequest):
 
 
 @router.post("/login")
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, request: Request):
     """Log in existing user."""
+    _check_login_rate(request)
     from auth_supabase import _sb_anon
     try:
         result = _sb_anon.auth.sign_in_with_password({

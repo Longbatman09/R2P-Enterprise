@@ -396,15 +396,16 @@ async def health():
 
 
 @app.get("/tools")
-async def list_tools_rest():
-    """REST GET equivalent of tools/list — useful for dev/debug."""
+async def list_tools_rest(principal: dict = Depends(get_api_principal)):
+    """REST GET equivalent of tools/list — requires a valid key or JWT."""
     return {"tools": [
         {"name": k, **v}
         for k, v in AgentRegistry.all_tools().items()
     ]}
 
 @app.get("/metrics")
-async def metrics():
+async def metrics(principal: dict = Depends(get_api_principal)):
+    """Internal diagnostics — requires a valid key or JWT."""
     return {
         "connected_sse_clients": len(_subscribers),
         "registered_tools": len(AgentRegistry.all_tools()),
@@ -413,16 +414,16 @@ async def metrics():
     }
 
 
-# ── surface real errors (instead of a generic 500) while the project is in
-#    active development — makes frontend-side debugging actionable ───────────
+# ── generic 500s — real error details stay in server logs only ──────────────
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     log.error(
-        "Unhandled error on %s %s: %s", request.method, request.url.path, exc
+        "Unhandled error on %s %s", request.method, request.url.path,
+        exc_info=True,
     )
     return JSONResponse(
         status_code=500,
-        content={"detail": f"{type(exc).__name__}: {exc}"},
+        content={"detail": "Internal server error"},
     )
 
 
