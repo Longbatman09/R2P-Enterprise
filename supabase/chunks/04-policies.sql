@@ -1,4 +1,3 @@
-$$;
 DROP POLICY IF EXISTS "schools_service_role_all" ON public.schools;
 CREATE POLICY "schools_service_role_all"
   ON public.schools FOR ALL

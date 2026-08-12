@@ -11,3 +11,4 @@ ALTER TABLE public.user_api_keys ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.current_user_school_id()
 RETURNS UUID LANGUAGE sql STABLE AS $$
   SELECT school_id FROM public.profiles WHERE id = auth.uid();
+$$;
